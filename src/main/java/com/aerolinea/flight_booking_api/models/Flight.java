@@ -1,5 +1,8 @@
 package com.aerolinea.flight_booking_api.models;
 
+import java.time.LocalDateTime;
+import java.util.Date;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -12,32 +15,46 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.time.LocalDateTime;
-
 
 @Entity
-@Table(name = "roles")
+@Table(name="flights")
 @Getter
 @Setter
-@NoArgsConstructor
 @AllArgsConstructor
-public class Role {
+@NoArgsConstructor
+public class Flight {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false, unique = true)
-    private String name;
+    @Column(name = "flight_number", nullable = false, unique = true)
+    private String flightNumber;
 
-    @Column(name = "description")
-    private String description;
+    @Column(name = "departure", nullable = false)
+    private String departure;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "departure_time", nullable = false)
+    private Date departureTime;
+
+    @Column(name = "destination", nullable = false)
+    private String destination;
+    
+    @Column(name="destination_time", nullable = false)
+    private Date destinationTime;
+
+    @Column(name = "avaible_seats", nullable = false) 
+    private Integer avaibleSeats;
+
+    @Column(name = "price", nullable = false)
+    private Double price;
+
+    @Column(name="created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name="updated_at")
     private LocalDateTime updatedAt;
+
 
     @PrePersist
     protected void onCreate(){
