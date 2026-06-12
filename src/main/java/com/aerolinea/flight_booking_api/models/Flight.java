@@ -1,6 +1,5 @@
 package com.aerolinea.flight_booking_api.models;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 
 import jakarta.persistence.Column;
@@ -8,8 +7,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -22,7 +19,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Flight {
+public class Flight  extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,22 +45,5 @@ public class Flight {
 
     @Column(name = "price", nullable = false)
     private Double price;
-
-    @Column(name="created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name="updated_at")
-    private LocalDateTime updatedAt;
-
-
-    @PrePersist
-    protected void onCreate(){
-        createdAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate(){
-        updatedAt = LocalDateTime.now();
-    }
 
 }

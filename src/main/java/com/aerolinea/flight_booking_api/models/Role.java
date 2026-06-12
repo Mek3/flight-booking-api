@@ -5,14 +5,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.time.LocalDateTime;
 
 
 @Entity
@@ -21,7 +18,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Role {
+public class Role extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,21 +29,5 @@ public class Role {
 
     @Column(name = "description")
     private String description;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate(){
-        createdAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate(){
-        updatedAt = LocalDateTime.now();
-    }
 
 }
