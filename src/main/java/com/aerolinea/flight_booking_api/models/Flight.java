@@ -1,5 +1,6 @@
 package com.aerolinea.flight_booking_api.models;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 import jakarta.persistence.Column;
@@ -44,6 +45,6 @@ public class Flight  extends BaseEntity {
     private Integer avaibleSeats;
 
     @Column(name = "price", nullable = false)
-    private Double price;
+    private BigDecimal price;
 
 }
