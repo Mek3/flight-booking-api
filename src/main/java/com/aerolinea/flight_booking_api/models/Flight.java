@@ -1,6 +1,7 @@
 package com.aerolinea.flight_booking_api.models;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import jakarta.persistence.Column;
@@ -33,13 +34,13 @@ public class Flight  extends BaseEntity {
     private String departure;
 
     @Column(name = "departure_time", nullable = false)
-    private Date departureTime;
+    private LocalDateTime departureTime;
 
     @Column(name = "destination", nullable = false)
     private String destination;
     
     @Column(name="destination_time", nullable = false)
-    private Date destinationTime;
+    private LocalDateTime destinationTime;
 
     @Column(name = "avaible_seats", nullable = false) 
     private Integer avaibleSeats;
