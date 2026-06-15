@@ -35,6 +35,9 @@ public class BaseEntity {
     @PrePersist
     protected void onCreated(){
         createdAt = LocalDateTime.now();
+        if (this.createdBy == null || this.createdBy.isBlank()) {
+            this.createdBy = "SYSTEM"; 
+        }
     }
 
     @PreUpdate

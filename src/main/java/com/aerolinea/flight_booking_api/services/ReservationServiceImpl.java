@@ -29,7 +29,7 @@ public class ReservationServiceImpl implements ReservationService{
 
     @Override
     @Transactional
-    public ReservationDTO createReservation(ReservationDTO reservationDTO) throws Exception {
+    public ReservationDTO createReservation(ReservationDTO reservationDTO) {
        
         if(reservationDTO == null) {
             throw new IllegalArgumentException("ReservationDTO is null");

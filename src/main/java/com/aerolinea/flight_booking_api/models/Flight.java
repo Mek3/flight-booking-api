@@ -43,11 +43,13 @@ public class Flight  extends BaseEntity {
     @Column(name="destination_time", nullable = false)
     private LocalDateTime destinationTime;
 
-    @Version
     @Column(name = "avaible_seats", nullable = false) 
     private Integer avaibleSeats;
 
     @Column(name = "price", nullable = false)
     private BigDecimal price;
+
+    @Version
+    private Long version;
 
 }
