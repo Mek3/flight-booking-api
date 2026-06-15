@@ -10,6 +10,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -42,6 +43,7 @@ public class Flight  extends BaseEntity {
     @Column(name="destination_time", nullable = false)
     private LocalDateTime destinationTime;
 
+    @Version
     @Column(name = "avaible_seats", nullable = false) 
     private Integer avaibleSeats;
 
