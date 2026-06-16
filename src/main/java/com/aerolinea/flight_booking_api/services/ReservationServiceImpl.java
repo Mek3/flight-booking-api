@@ -68,6 +68,12 @@ public class ReservationServiceImpl implements ReservationService{
 
         reservationDTO.setId(reservation.getId());
 
+        reservationDTO.setId(reservation.getId());
+        reservationDTO.setReservationCode(reservation.getReservationCode());
+        reservationDTO.setStatus(reservation.getStatus());
+        reservationDTO.setTotalPrice(reservation.getTotalPrice());
+        reservationDTO.setCreatedAt(reservation.getCreatedAt());
+
         return reservationDTO;
     }
 
