@@ -39,7 +39,6 @@ public class ReservationServiceImpl implements ReservationService{
 
         User user = userRepository.findById(reservationDTO.getUserId())
                                     .orElseThrow(()-> new IllegalArgumentException("User not found with ID: " + reservationDTO.getUserId()));
-
         
         reservation.setUser(user);
 
