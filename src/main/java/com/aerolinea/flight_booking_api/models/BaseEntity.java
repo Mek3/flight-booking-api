@@ -2,47 +2,46 @@ package com.aerolinea.flight_booking_api.models;
 
 import java.time.LocalDateTime;
 
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
 @MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
 public class BaseEntity {
 
+    @CreatedDate
     @Column(name="created_at", nullable=false, updatable=false)
     protected LocalDateTime createdAt;
 
+    @CreatedBy
     @Column(name= "created_by", nullable = false, updatable = false)
     protected String createdBy;
 
-    @Column(name = "update_at")
+    @LastModifiedDate
+    @Column(name = "updated_at")
     protected LocalDateTime updateAt;
 
-    @Column(name="update_by")
+    @LastModifiedBy
+    @Column(name="updated_by")
     protected String updateBy;
 
-    @Column(name = "delete_at")
+    @Column(name = "deleted_at")
     protected LocalDateTime deleteAt;
 
-    @Column(name="delete_by")
+    @Column(name="deleted_by")
     protected String deleteBy;
 
-    @PrePersist
-    protected void onCreated(){
-        createdAt = LocalDateTime.now();
-        if (this.createdBy == null || this.createdBy.isBlank()) {
-            this.createdBy = "SYSTEM"; 
-        }
-    }
 
-    @PreUpdate
-    protected void onUpdate() {
-        updateAt = LocalDateTime.now();
-    }
 
 }

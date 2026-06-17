@@ -8,4 +8,6 @@ import com.aerolinea.flight_booking_api.models.Role;
 
 public interface RoleRepository extends JpaRepository<Role, Long>{
 
+    Role findByName(String string);
+
 }
