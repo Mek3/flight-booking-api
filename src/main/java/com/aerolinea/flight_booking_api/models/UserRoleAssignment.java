@@ -1,6 +1,5 @@
 package com.aerolinea.flight_booking_api.models;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;

@@ -2,8 +2,6 @@ package com.aerolinea.flight_booking_api.models;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Date;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
