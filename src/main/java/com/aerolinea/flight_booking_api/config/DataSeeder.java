@@ -72,7 +72,7 @@ public class DataSeeder implements CommandLineRunner{
             testFlight.setDepartureTime(LocalDateTime.now().plusDays(1)); // Sale mañana
             testFlight.setDestination("Tokyo");
             testFlight.setDestinationTime(LocalDateTime.now().plusDays(1).plusHours(14)); // Llega en 14 horas
-            testFlight.setAvaibleSeats(150); 
+            testFlight.setAvailableSeats(150); 
             testFlight.setPrice(new BigDecimal("299.99")); 
 
             flightRepository.save(testFlight);
