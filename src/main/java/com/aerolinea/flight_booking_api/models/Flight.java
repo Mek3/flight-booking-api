@@ -41,8 +41,8 @@ public class Flight  extends BaseEntity {
     @Column(name="destination_time", nullable = false)
     private LocalDateTime destinationTime;
 
-    @Column(name = "avaible_seats", nullable = false) 
-    private Integer avaibleSeats;
+    @Column(name = "available_seats", nullable = false) 
+    private Integer availableSeats;
 
     @Column(name = "price", nullable = false)
     private BigDecimal price;

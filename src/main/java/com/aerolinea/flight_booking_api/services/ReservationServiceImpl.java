@@ -3,10 +3,13 @@ package com.aerolinea.flight_booking_api.services;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.aerolinea.flight_booking_api.dtos.ReservationDTO;
+import com.aerolinea.flight_booking_api.dtos.ReservationRequest;
+import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
 import com.aerolinea.flight_booking_api.models.Flight;
 import com.aerolinea.flight_booking_api.models.Reservation;
 import com.aerolinea.flight_booking_api.models.ReservationStatus;
@@ -24,37 +27,40 @@ public class ReservationServiceImpl implements ReservationService{
     private final UserRepository userRepository;
     private final FlightRepository flightRepository;
     private final ReservationRepository reservationRepository;
+    private final ReservationMapper reservationMapper;
 
 
     @Override
     @Transactional
-    public ReservationDTO createReservation(ReservationDTO reservationDTO) {
+    public ReservationDTO createReservation(ReservationRequest reservationRequest) {
        
-        if(reservationDTO == null) {
+        if(reservationRequest == null) {
             throw new IllegalArgumentException("ReservationDTO is null");
         }
 
         Reservation reservation = new Reservation();
 
-        User user = userRepository.findById(reservationDTO.getUserId())
-                                    .orElseThrow(()-> new IllegalArgumentException("User not found with ID: " + reservationDTO.getUserId()));
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User user = userRepository.findByUsername(username)
+                                    .orElseThrow(()-> new IllegalArgumentException("User not found with username: " + username));
         
         reservation.setUser(user);
 
-        Flight flight = flightRepository.findById(reservationDTO.getFlightId())
-                                        .orElseThrow(() -> new IllegalArgumentException("Flight not found with ID: " + reservationDTO.getFlightId()));
+        Flight flight = flightRepository.findById(reservationRequest.flightId())
+                                        .orElseThrow(() -> new IllegalArgumentException("Flight not found with ID: " + reservationRequest.flightId()));
 
-        if(flight.getAvaibleSeats() < reservationDTO.getNumberOfPassengers()) {
-            throw new RuntimeException("There aren't seats avaible");
+        if(flight.getAvailableSeats() < reservationRequest.numberOfPassengers()) {
+            throw new RuntimeException("There aren't seats available");
         }
 
-        flight.setAvaibleSeats(flight.getAvaibleSeats() - reservationDTO.getNumberOfPassengers());
+        flight.setAvailableSeats(flight.getAvailableSeats() - reservationRequest.numberOfPassengers());
         reservation.setFlight(flight);
 
-        BigDecimal totalPrice =flight.getPrice().multiply(BigDecimal.valueOf(reservationDTO.getNumberOfPassengers()));
+        BigDecimal totalPrice =flight.getPrice().multiply(BigDecimal.valueOf(reservationRequest.numberOfPassengers()));
         reservation.setTotalPrice(totalPrice);  
 
-        reservation.setNumberOfPassengers(reservationDTO.getNumberOfPassengers());
+        reservation.setNumberOfPassengers(reservationRequest.numberOfPassengers());
 
         reservation.setStatus(ReservationStatus.CONFIRMED);
 
@@ -62,17 +68,9 @@ public class ReservationServiceImpl implements ReservationService{
         reservation.setReservationCode(uuid); 
 
         flightRepository.save(flight);
-        reservationRepository.save(reservation);
 
-        reservationDTO.setId(reservation.getId());
+        return reservationMapper.toDto(reservationRepository.saveAndFlush(reservation));
 
-        reservationDTO.setId(reservation.getId());
-        reservationDTO.setReservationCode(reservation.getReservationCode());
-        reservationDTO.setStatus(reservation.getStatus());
-        reservationDTO.setTotalPrice(reservation.getTotalPrice());
-        reservationDTO.setCreatedAt(reservation.getCreatedAt());
-
-        return reservationDTO;
     }
 
 
