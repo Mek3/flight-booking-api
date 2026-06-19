@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -13,6 +14,7 @@ import org.springframework.web.context.request.WebRequest;
 
 import com.aerolinea.flight_booking_api.models.ApiError;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
 @RestControllerAdvice
@@ -79,6 +81,22 @@ public class GlobalExceptionController {
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorApi);
 
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiError> handleAuthorizationDeniedException(
+        AuthorizationDeniedException ex, 
+        WebRequest request) {
+    
+        ApiError apiError = new ApiError(
+            LocalDateTime.now(),
+            HttpStatus.FORBIDDEN.value(),
+            HttpStatus.FORBIDDEN.getReasonPhrase(),
+            "Access Denied: You do not have the required roles to perform this action.",
+            request.getDescription(false).replace("uri=", "")
+        );
+    
+        return new ResponseEntity<>(apiError, HttpStatus.FORBIDDEN);
     }
 
 
