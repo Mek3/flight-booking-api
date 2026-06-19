@@ -6,6 +6,7 @@ import com.aerolinea.flight_booking_api.dtos.ReservationDTO;
 import com.aerolinea.flight_booking_api.dtos.ReservationRequest;
 import com.aerolinea.flight_booking_api.services.ReservationService;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
 
@@ -27,7 +28,7 @@ public class ReservationController {
 
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PostMapping("/reservations")
-    public ResponseEntity<ReservationDTO> createReservationDTO(@RequestBody ReservationRequest reservationRequest)  {
+    public ResponseEntity<ReservationDTO> createReservationDTO(@RequestBody @Valid ReservationRequest reservationRequest)  {
         return ResponseEntity.status(HttpStatus.CREATED).body(reservationService.createReservation(reservationRequest));
     }
     
