@@ -16,6 +16,7 @@ A RESTful API for managing flight reservations, built with Spring Boot. This pro
 * ✅ **Data Integrity:** Implementation of JPA Optimistic Locking (`@Version`) to prevent concurrent modification conflicts during flight updates and bookings.
 * ✅ **RESTful Conventions:** Strict adherence to industry-standard pluralized routing and proper HTTP status codes (e.g., `204 No Content` for deletions).
 * ✅ **Auditing:** Automatic JPA Auditing configured for tracking `created_at`, `updated_at`, `created_by`, and `deleted_by` fields.
+* ✅ **Global Exception Handling:** Centralized error management using `@RestControllerAdvice`. Standardizes all API errors (400, 404, 409, 500) into a clean, immutable `ApiError` JSON payload. Strictly prevents Information Exposure by masking database constraints and raw Java stack traces from the client, while maintaining secure server-side observability via SLF4J logging.
 
 ## ⚙️ How to run locally
 1. Clone the repository.
