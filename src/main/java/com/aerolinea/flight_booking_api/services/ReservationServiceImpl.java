@@ -69,7 +69,7 @@ public class ReservationServiceImpl implements ReservationService{
 
         flightRepository.save(flight);
 
-        return reservationMapper.toDto(reservationRepository.saveAndFlush(reservation));
+        return reservationMapper.toReservationDTO(reservationRepository.saveAndFlush(reservation));
 
     }
 
