@@ -14,7 +14,6 @@ import org.springframework.web.context.request.WebRequest;
 
 import com.aerolinea.flight_booking_api.models.ApiError;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
 @RestControllerAdvice

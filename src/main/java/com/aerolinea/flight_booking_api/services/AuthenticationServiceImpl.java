@@ -40,7 +40,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
             throw new ResponseStatusException (HttpStatus.CONFLICT, "User "+ registerRequest.username() + " already exists");
         }
 
-        User user = userMapper.toEntity(registerRequest);
+        User user = userMapper.toUser(registerRequest);
         String encodePassword = passwordEncoder.encode(registerRequest.password());
         user.setPassword(encodePassword);
 

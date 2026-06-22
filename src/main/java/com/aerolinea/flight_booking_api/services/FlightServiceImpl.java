@@ -20,9 +20,8 @@ public class FlightServiceImpl implements FlightService{
 
     @Override
     public FlightDTO save(FlightDTO flightDTO) {
-        return flightMapper.toDto(flightRepository.save(flightMapper.toEntity(flightDTO)));
+        return flightMapper.toFlightDTO(flightRepository.save(flightMapper.toFlight(flightDTO)));
     }
-
     
 
     @Override
@@ -38,19 +37,19 @@ public class FlightServiceImpl implements FlightService{
         existingFlight.setAvailableSeats(flightDTO.getAvailableSeats());
         existingFlight.setPrice(flightDTO.getPrice());
 
-        return flightMapper.toDto(flightRepository.save(existingFlight));
+        return flightMapper.toFlightDTO(flightRepository.save(existingFlight));
     }
 
     @Override
     public FlightDTO flightById(Long id) {
 
-        return flightMapper.toDto(flightRepository.findById(id).orElseThrow(() ->  new IllegalArgumentException("Flight not found with ID: " + id)));
+        return flightMapper.toFlightDTO(flightRepository.findById(id).orElseThrow(() ->  new IllegalArgumentException("Flight not found with ID: " + id)));
 
     }
 
     @Override
     public List<FlightDTO> getFlights() {
-        return flightRepository.findAll().stream().map(flight -> flightMapper.toDto(flight)).toList();
+        return flightRepository.findAll().stream().map(flight -> flightMapper.toFlightDTO(flight)).toList();
     }
 
 
