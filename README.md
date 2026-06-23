@@ -18,12 +18,16 @@ A RESTful API for managing flight reservations, built with Spring Boot. This pro
 * ✅ **Auditing:** Automatic JPA Auditing configured for tracking `created_at`, `updated_at`, `created_by`, and `deleted_by` fields.
 * ✅ **Global Exception Handling:** Centralized error management using `@RestControllerAdvice`. Standardizes all API errors (400, 403, 404, 409, 500) into a clean, immutable `ApiError` JSON payload. Strictly prevents Information Exposure by masking database constraints and raw Java stack traces from the client, while maintaining secure server-side observability via SLF4J logging.
 * ✅ **Defense in Depth Error Handling:** Unified security exception responses across both the Servlet Filter chain and MVC Controller boundaries. Custom Spring Security entry points intercept 401/403 errors outside the `DispatcherServlet`, manually serializing them to guarantee a consistent API contract.
+* ✅ **DTO Automation:** Automated object mapping between Entities and DTOs using MapStruct interfaces.
+* ✅ **Database Migrations:** Schema and data versioning strictly managed via Flyway.
+* ✅ **API Documentation:** Auto-generated Swagger UI / OpenAPI specification with security bypass for interactive endpoint testing.
+* ✅ **CORS Configuration:** Global Cross-Origin Resource Sharing filters configured for secure external frontend integration.
 
 ## ⚙️ How to run locally
 1. Clone the repository.
 2. Ensure MySQL is running and update `application.properties` with your database credentials.
 3. Run the application via your IDE or using Maven.
-4. **Note:** A `DataSeeder` is configured to automatically inject initial test data (Users, Roles, and Flights) upon startup to facilitate local testing.
+4. **Note:** Database schema creation and initial test data injection (Users, Roles, Flights) are automatically handled upon startup via **Flyway migrations** (V1 & V2), completely replacing manual data seeders.
 
 ## 🔐 Authentication & Authorization (Testing via Postman)
 The API strictly enforces role-based access. 
