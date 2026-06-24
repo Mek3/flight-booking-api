@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
-import com.aerolinea.flight_booking_api.models.ApiError;
+import com.aerolinea.flight_booking_api.dtos.ApiError;
+import com.aerolinea.flight_booking_api.exceptions.AppBaseException;
+import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,30 +22,18 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class GlobalExceptionController {
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException exception, WebRequest request){
-
-        ApiError error = new ApiError(
-            LocalDateTime.now(), 
-            HttpStatus.NOT_FOUND.value(),
-            HttpStatus.NOT_FOUND.getReasonPhrase(),
-            exception.getMessage(), 
-            request.getDescription(false).replace("uri=", "")
-        );
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-
-    }
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleMethodArgumentNotValid(MethodArgumentNotValidException exception, WebRequest request){
 
         String validationException = exception.getBindingResult().getFieldErrors().stream().map(fieldError -> fieldError.getField() 
                                     + ": " + fieldError.getDefaultMessage()).collect(Collectors.joining(", "));
 
+        log.warn("Validation error: {}", validationException);
+
         ApiError errorApi = new ApiError(
             LocalDateTime.now(),
             HttpStatus.BAD_REQUEST.value(),
+            ErrorCode.VALIDATION_ERROR.getCode(),
             HttpStatus.BAD_REQUEST.getReasonPhrase(),
             validationException,
             request.getDescription(false).replace("uri=", "")
@@ -54,10 +44,11 @@ public class GlobalExceptionController {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrityViolation(DataIntegrityViolationException exception, WebRequest request) {
-
+        log.warn("Database conflict: {}", exception.getMessage());
         ApiError errorApi = new ApiError(
             LocalDateTime.now(),
             HttpStatus.CONFLICT.value(),
+            ErrorCode.DATABASE_CONFLICT.getCode(),
             HttpStatus.CONFLICT.getReasonPhrase(),
             "Database integrity violation: The resource conflict suggests it may already exist or violates data constraints.",
             request.getDescription(false).replace("uri=", "")
@@ -66,30 +57,16 @@ public class GlobalExceptionController {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorApi);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiError> handleException(Exception exception, WebRequest request){
-        log.error("Unhandled exception caught in GlobalExceptionHandler", exception);
-
-        ApiError errorApi =  new ApiError(
-            LocalDateTime.now(),
-            HttpStatus.INTERNAL_SERVER_ERROR.value(),
-            HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-            "An unexpected error occurred. Please contact support.",
-            request.getDescription(false).replace("uri=", "")
-        );
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorApi);
-
-    }
 
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ApiError> handleAuthorizationDeniedException(
-        AuthorizationDeniedException ex, 
-        WebRequest request) {
-    
+        AuthorizationDeniedException exception, WebRequest request) {    
+        log.warn("Access denied: {}", exception.getMessage());
+
         ApiError apiError = new ApiError(
             LocalDateTime.now(),
             HttpStatus.FORBIDDEN.value(),
+            ErrorCode.INSUFFICIENT_PERMISSIONS.getCode(),
             HttpStatus.FORBIDDEN.getReasonPhrase(),
             "Access Denied: You do not have the required roles to perform this action.",
             request.getDescription(false).replace("uri=", "")
@@ -99,5 +76,37 @@ public class GlobalExceptionController {
     }
 
 
+    @ExceptionHandler(AppBaseException.class)
+    public ResponseEntity<ApiError> handleAppBaseException(AppBaseException appBaseException, WebRequest webRequest){
+        log.warn("Business rule violated: {}", appBaseException.getMessage());
 
+        ApiError apiError = new ApiError(
+            LocalDateTime.now(),
+            appBaseException.getCodeStatusHttp(),
+            appBaseException.getErrorCode().getCode(),
+            HttpStatus.valueOf(appBaseException.getCodeStatusHttp()).getReasonPhrase(),
+            appBaseException.getMessage(),
+            webRequest.getDescription(false).replace("uri=", "")
+        );
+
+        return ResponseEntity.status(appBaseException.getCodeStatusHttp()).body(apiError);
+    }
+
+    
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleException(Exception exception, WebRequest request){
+        log.error("Unhandled exception caught in GlobalExceptionHandler", exception);
+
+        ApiError errorApi =  new ApiError(
+            LocalDateTime.now(),
+            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            ErrorCode.INTERNAL_FATAL_ERROR.getCode(),
+            HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+            "An unexpected error occurred. Please contact support.",
+            request.getDescription(false).replace("uri=", "")
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorApi);
+
+    }
 }

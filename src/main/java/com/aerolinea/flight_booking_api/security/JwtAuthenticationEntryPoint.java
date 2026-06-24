@@ -9,7 +9,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
-import com.aerolinea.flight_booking_api.models.ApiError;
+import com.aerolinea.flight_booking_api.dtos.ApiError;
+import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -29,6 +30,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint{
         ApiError apiError = new ApiError(
             LocalDateTime.now(),
             HttpStatus.UNAUTHORIZED.value(),
+            ErrorCode.INVALID_OR_MISSING_TOKEN.getCode(),
             HttpStatus.UNAUTHORIZED.getReasonPhrase(),
             "Unauthorized: Invallid, missing or expired JWT token.",
             request.getRequestURI()
