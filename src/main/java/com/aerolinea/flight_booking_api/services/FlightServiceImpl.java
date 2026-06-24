@@ -2,6 +2,8 @@ package com.aerolinea.flight_booking_api.services;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.aerolinea.flight_booking_api.dtos.FlightDTO;
@@ -31,13 +33,7 @@ public class FlightServiceImpl implements FlightService{
         Flight existingFlight = flightRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,"Flight not found with ID: " + id));
 
-        existingFlight.setFlightNumber(flightDTO.getFlightNumber());
-        existingFlight.setDeparture(flightDTO.getDeparture());
-        existingFlight.setDepartureTime(flightDTO.getDepartureTime());
-        existingFlight.setDestination(flightDTO.getDestination());
-        existingFlight.setDestinationTime(flightDTO.getDestinationTime());
-        existingFlight.setAvailableSeats(flightDTO.getAvailableSeats());
-        existingFlight.setPrice(flightDTO.getPrice());
+        flightMapper.updateFlightFromDTO(flightDTO, existingFlight);
 
         return flightMapper.toFlightDTO(flightRepository.save(existingFlight));
     }
@@ -52,11 +48,9 @@ public class FlightServiceImpl implements FlightService{
     }
 
     @Override
-    public List<FlightDTO> getFlights() {
-        return flightRepository.findAll().stream().map(flight -> flightMapper.toFlightDTO(flight)).toList();
+    public Page<FlightDTO> getFlights(Pageable pageable) {
+        return flightRepository.findAll(pageable).map(flightMapper::toFlightDTO);
     }
-
-
 
     @Override
     public void deleteFlightById(Long id) {

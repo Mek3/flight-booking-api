@@ -9,8 +9,9 @@ import com.aerolinea.flight_booking_api.services.FlightService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,8 +31,8 @@ public class FlightController {
     private final FlightService flightService;
 
     @GetMapping()
-    public ResponseEntity<List<FlightDTO>> getFlights() {
-        return ResponseEntity.ok().body(flightService.getFlights());
+    public ResponseEntity<Page<FlightDTO>> getFlights(@PageableDefault(size = 10, sort = "departureTime") Pageable pageable) {
+        return ResponseEntity.ok().body(flightService.getFlights(pageable));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
