@@ -27,17 +27,20 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint{
     public void commence(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException authException) throws IOException, ServletException {
 
+        String originalUri = (String) request.getAttribute("jakarta.servlet.forward.request_uri");
+        String path = originalUri != null ? originalUri : request.getRequestURI();
+
         ApiError apiError = new ApiError(
             LocalDateTime.now(),
             HttpStatus.UNAUTHORIZED.value(),
             ErrorCode.INVALID_OR_MISSING_TOKEN.getCode(),
             HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-            "Unauthorized: Invallid, missing or expired JWT token.",
-            request.getRequestURI()
+            "Unauthorized: Invalid, missing or expired JWT token.",
+            path
         );
 
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);

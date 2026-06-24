@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +22,22 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionController {
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiError> handleBadCredentialsException(BadCredentialsException exception, WebRequest webRequest) {
+        log.warn("Failed login attempt: {}", exception.getMessage());
+
+        ApiError apiError = new ApiError(
+            LocalDateTime.now(),
+            HttpStatus.UNAUTHORIZED.value(), 
+            ErrorCode.INVALID_CREDENTIALS.getCode(), 
+            HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+            "Invalid username or password.", 
+            webRequest.getDescription(false).replace("uri=", "")
+        );
+    
+        return new ResponseEntity<>(apiError, HttpStatus.UNAUTHORIZED);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleMethodArgumentNotValid(MethodArgumentNotValidException exception, WebRequest request){
