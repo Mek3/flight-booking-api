@@ -9,7 +9,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
-import com.aerolinea.flight_booking_api.models.ApiError;
+import com.aerolinea.flight_booking_api.dtos.ApiError;
+import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -25,12 +26,16 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler{
     public void handle(HttpServletRequest request, HttpServletResponse response,
             AccessDeniedException accessDeniedException) throws IOException, ServletException {
         
+        String originalUri = (String) request.getAttribute("jakarta.servlet.forward.request_uri");
+        String path = originalUri != null ? originalUri : request.getRequestURI();
+
         ApiError apiError = new ApiError(
             LocalDateTime.now(),
             HttpStatus.FORBIDDEN.value(),
+            ErrorCode.INSUFFICIENT_PERMISSIONS.getCode(),
             HttpStatus.FORBIDDEN.getReasonPhrase(),
             "Forbidden: You do not have the required permissions to access this resource.",
-            request.getRequestURI()
+            path
         );
 
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

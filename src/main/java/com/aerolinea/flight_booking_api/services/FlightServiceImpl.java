@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.aerolinea.flight_booking_api.dtos.FlightDTO;
+import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
+import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
 import com.aerolinea.flight_booking_api.mappers.FlightMapper;
 import com.aerolinea.flight_booking_api.models.Flight;
 import com.aerolinea.flight_booking_api.repositories.FlightRepository;
@@ -27,7 +29,7 @@ public class FlightServiceImpl implements FlightService{
     @Override
     public FlightDTO updateFlight(Long id, FlightDTO flightDTO) {
         Flight existingFlight = flightRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Flight not found with ID: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,"Flight not found with ID: " + id));
 
         existingFlight.setFlightNumber(flightDTO.getFlightNumber());
         existingFlight.setDeparture(flightDTO.getDeparture());
@@ -43,7 +45,9 @@ public class FlightServiceImpl implements FlightService{
     @Override
     public FlightDTO flightById(Long id) {
 
-        return flightMapper.toFlightDTO(flightRepository.findById(id).orElseThrow(() ->  new IllegalArgumentException("Flight not found with ID: " + id)));
+        return flightMapper.toFlightDTO(flightRepository.findById(id).orElseThrow(() ->  
+                new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
+                                        "Flight not found with ID: " + id)));
 
     }
 
@@ -57,7 +61,8 @@ public class FlightServiceImpl implements FlightService{
     @Override
     public void deleteFlightById(Long id) {
         if(!flightRepository.existsById(id)) {
-            throw new IllegalArgumentException("Flight not found with ID: " + id);
+            throw new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
+                                        "Flight not found with ID: " + id);
         }
         flightRepository.deleteById(id);
     }
