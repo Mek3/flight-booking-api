@@ -8,10 +8,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.aerolinea.flight_booking_api.dtos.ApiError;
 import com.aerolinea.flight_booking_api.exceptions.AppBaseException;
@@ -22,6 +24,42 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionController {
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMethodNotSupportedException(HttpRequestMethodNotSupportedException ex, WebRequest webRequest) {
+        String path = webRequest.getDescription(false).replace("uri=", "");
+    
+        log.warn("Method not allowed: {} for URI: {}", ex.getMethod(), path);
+        
+        ApiError apiError = new ApiError(
+                LocalDateTime.now(),
+                HttpStatus.METHOD_NOT_ALLOWED.value(),
+                ErrorCode.METHOD_NOT_ALLOWED.getCode(),
+                "Method Not Allowed",
+                ex.getMessage(),
+                path
+        );
+        
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(apiError);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiError> handleNoResourceFoundException(NoResourceFoundException ex, WebRequest webRequest) {
+        String path = webRequest.getDescription(false).replace("uri=", "");
+    
+        log.warn("Enpoint not found: {}", path);
+        
+        ApiError apiError = new ApiError(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                ErrorCode.ENDPOINT_NOT_FOUND.getCode(),
+                "Not Found",
+                ex.getMessage(),
+                path
+        );
+        
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
+    }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiError> handleBadCredentialsException(BadCredentialsException exception, WebRequest webRequest) {

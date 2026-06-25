@@ -7,4 +7,6 @@ public interface ReservationService {
 
      public ReservationDTO createReservation(ReservationRequest reservationRequest);
 
+     void cancelReservation(Long idReservation);
+
 }

@@ -1,6 +1,8 @@
 package com.aerolinea.flight_booking_api.services;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -86,6 +88,50 @@ public class ReservationServiceImpl implements ReservationService{
 
     }
 
+    @Override
+    @Transactional
+    public void cancelReservation(Long idReservation) {
+
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+    
+        if(username == null) {
+            throw new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND,
+                 "User not found with username: " + username);
+        }
+
+        Reservation reservation = reservationRepository.findById(idReservation).orElseThrow(() -> 
+                new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND,
+                 "Reservation not found with ID: " + idReservation));
+
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+        boolean isOwner = reservation.getUser() != null && reservation.getUser().getUsername().equals(username);
+
+        if(!isAdmin && !isOwner) {
+            throw new BusinessRuleViolationException(ErrorCode.INSUFFICIENT_PERMISSIONS,
+                     "User " + username +" lacks permissions to cancel Reservation ID: " + idReservation);
+        }
+
+        if(reservation.getStatus().equals(ReservationStatus.CANCELLED)) {
+            throw new BusinessRuleViolationException(ErrorCode.RESERVATION_ALREADY_CANCELLED,
+                 "Reservation  with ID: " + idReservation + " already cancelled.");
+        }
+
+        if(reservation.getFlight()== null) {
+            throw new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
+                 "Flight not found in Reservation with ID: " + idReservation);
+        }
+            
+        Duration diff = Duration.between(LocalDateTime.now(), reservation.getFlight().getDepartureTime());
+        if(diff.toHours() <= 24) {
+            throw new BusinessRuleViolationException(ErrorCode.CANCELLATION_TIME_EXPIRED, 
+                "Cancellations must be made at least 24 hours in advance. ID: " + idReservation);
+        }
+
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        reservation.getFlight().setAvailableSeats(reservation.getFlight().getAvailableSeats() + reservation.getNumberOfPassengers());
+        reservationRepository.save(reservation);
+    }
 
 
 

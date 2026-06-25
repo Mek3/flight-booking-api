@@ -24,6 +24,8 @@ public enum ErrorCode {
     // System & Framework (9000 - 9999)
     VALIDATION_ERROR(9001L),
     DATABASE_CONFLICT(9002L),
+    METHOD_NOT_ALLOWED(9003L),
+    ENDPOINT_NOT_FOUND(9004L),
     INTERNAL_FATAL_ERROR(9999L);
 
     private final Long code;
