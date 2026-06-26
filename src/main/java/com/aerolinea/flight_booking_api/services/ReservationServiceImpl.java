@@ -3,13 +3,17 @@ package com.aerolinea.flight_booking_api.services;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.aerolinea.flight_booking_api.dtos.ReservationDTO;
@@ -26,11 +30,11 @@ import com.aerolinea.flight_booking_api.repositories.FlightRepository;
 import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
 import com.aerolinea.flight_booking_api.repositories.UserRepository;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 public class ReservationServiceImpl implements ReservationService {
 
@@ -38,6 +42,19 @@ public class ReservationServiceImpl implements ReservationService {
     private final FlightRepository flightRepository;
     private final ReservationRepository reservationRepository;
     private final ReservationMapper reservationMapper;
+
+    @Autowired
+    @Lazy
+    private ReservationService reservationService;
+
+    private boolean isAdmin() {
+        return getAuthenticator().getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+    }
+
+    private Authentication getAuthenticator() {
+        return SecurityContextHolder.getContext().getAuthentication();
+    }
 
     @Override
     @Transactional
@@ -69,7 +86,7 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setTotalPrice(totalPrice);
 
         reservation.setNumberOfPassengers(reservationRequest.numberOfPassengers());
-        reservation.setStatus(ReservationStatus.CONFIRMED);
+        reservation.setStatus(ReservationStatus.PENDING);
 
         String uuid = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         reservation.setReservationCode(uuid);
@@ -154,13 +171,63 @@ public class ReservationServiceImpl implements ReservationService {
     public Page<ReservationDTO> getReservations(Pageable pageable) {
         return reservationRepository.findAll(pageable).map(reservationMapper::toReservationDTO);
     }
-
-    private boolean isAdmin() {
-        return getAuthenticator().getAuthorities().stream()
-                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+  
+    @Override
+    public void confirmReservation(Long id) {
+       String username = getAuthenticator().getName();
+       Reservation reservation = reservationRepository.findByIdAndUserUsername(id, username)
+                            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND, 
+                                                String.format(ErrorCode.RESERVATION_NOT_FOUND.getMessage(), id)));
+        reservation.setStatus(ReservationStatus.CONFIRMED);
+        reservationRepository.save(reservation);
+        log.info("Reservation successfully confirmed ID: {}", id);
     }
 
-    private Authentication getAuthenticator() {
-        return SecurityContextHolder.getContext().getAuthentication();
+
+    @Override
+    public void expirePendingReservations() {
+        
+        List<Reservation> expiredReservations = reservationRepository
+                .findByStatusAndCreatedAtBefore(ReservationStatus.PENDING, LocalDateTime.now().minusMinutes(15));
+
+        if (expiredReservations.isEmpty()) {
+            return;
+        }
+
+        log.info("Processing expiration for {} pending reservations.", expiredReservations.size());
+
+        int successCount = 0;
+        for (Reservation reservation : expiredReservations) {
+            try {
+                reservationService.processSingleExpiration(reservation);
+                successCount++;
+            } catch (Exception e) {
+                log.error("Failed to expire reservation ID: {}. Reason: {}", reservation.getId(), e.getMessage());
+            }
+        }
+        
+        log.info("Successfully expired {}/{} reservations.", successCount, expiredReservations.size());
     }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void processSingleExpiration(Reservation reservation) {
+        Flight flight = reservation.getFlight();
+
+        if (flight == null) {
+            log.error("Data Integrity Violation: Reservation ID {} lacks a valid Flight. Skipping.", reservation.getId());
+            return;
+        }
+
+        flight.setAvailableSeats(flight.getAvailableSeats() + reservation.getNumberOfPassengers());
+        
+        reservation.setStatus(ReservationStatus.EXPIRED);
+
+        reservationRepository.save(reservation);
+        flightRepository.save(flight); 
+
+        log.debug("Reservation {} expired. Seats restored to flight ID: {}", 
+                reservation.getReservationCode(), flight.getId());
+    } 
+
 }
