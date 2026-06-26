@@ -1,16 +1,15 @@
 package com.aerolinea.flight_booking_api.services;
 
-
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.aerolinea.flight_booking_api.dtos.LoginRequest;
 import com.aerolinea.flight_booking_api.dtos.RegisterRequest;
+import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationException;
+import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.mappers.UserMapper;
 import com.aerolinea.flight_booking_api.models.Role;
 import com.aerolinea.flight_booking_api.models.User;
@@ -36,8 +35,9 @@ public class AuthenticationServiceImpl implements AuthenticationService{
 
     @Override
     public String registerUser(RegisterRequest registerRequest) {
-        if(userRepository.existsByUsername(registerRequest.username())) {
-            throw new ResponseStatusException (HttpStatus.CONFLICT, "User "+ registerRequest.username() + " already exists");
+        if (userRepository.existsByUsername(registerRequest.username())) {
+            throw new BusinessRuleViolationException(ErrorCode.USER_ALREADY_EXISTS, 
+            String.format(ErrorCode.USER_ALREADY_EXISTS.getMessage(), registerRequest.username()));
         }
 
         User user = userMapper.toUser(registerRequest);

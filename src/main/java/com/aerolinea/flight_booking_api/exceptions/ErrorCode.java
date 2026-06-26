@@ -4,33 +4,35 @@ import lombok.Getter;
 
 @Getter
 public enum ErrorCode {
-    // Flight Domain (1000 - 1999)
-    FLIGHT_NOT_FOUND(1001L),
-    FLIGHT_DEPARTURE_PASSED(1002L),
-    NOT_ENOUGH_SEATS(1003L),
+   // Flight Domain (1000 - 1999)
+    FLIGHT_NOT_FOUND(1001L, "Flight not found with ID: %s"),
+    FLIGHT_DEPARTURE_PASSED(1002L, "Flight departure time has already passed for flight ID: %s"),
+    NOT_ENOUGH_SEATS(1003L, "Not enough seats available for flight ID: %s"),
 
     // Reservation Domain (2000 - 2999)
-    RESERVATION_NOT_FOUND(2001L),
-    RESERVATION_ALREADY_CANCELLED(2002L),
-    CANCELLATION_TIME_EXPIRED(2003L),
+    RESERVATION_NOT_FOUND(2001L, "Reservation not found with ID: %s"),
+    RESERVATION_ALREADY_CANCELLED(2002L, "Reservation with ID: %s is already cancelled"),
+    CANCELLATION_TIME_EXPIRED(2003L, "Cancellations must be made at least 24 hours in advance. Reservation ID: %s"),
 
     // User & Security Domain (3000 - 3999)
-    USER_NOT_FOUND(3001L),
-    USER_ALREADY_EXISTS(3002L),
-    INVALID_CREDENTIALS(3003L),             
-    INVALID_OR_MISSING_TOKEN(3004L),       
-    INSUFFICIENT_PERMISSIONS(3005L),
+    USER_NOT_FOUND(3001L, "User not found with username: %s"),
+    USER_ALREADY_EXISTS(3002L, "User already exists with username: %s"),
+    INVALID_CREDENTIALS(3003L, "Invalid username or password"),             
+    INVALID_OR_MISSING_TOKEN(3004L, "Authentication token is missing, invalid, or expired"),       
+    INSUFFICIENT_PERMISSIONS(3005L, "User %s lacks permissions to access or modify this resource"),
 
     // System & Framework (9000 - 9999)
-    VALIDATION_ERROR(9001L),
-    DATABASE_CONFLICT(9002L),
-    METHOD_NOT_ALLOWED(9003L),
-    ENDPOINT_NOT_FOUND(9004L),
-    INTERNAL_FATAL_ERROR(9999L);
+    VALIDATION_ERROR(9001L, "Validation error: %s"),
+    DATABASE_CONFLICT(9002L, "Database conflict detected: %s"),
+    METHOD_NOT_ALLOWED(9003L, "HTTP method %s is not supported for this endpoint"),
+    ENDPOINT_NOT_FOUND(9004L, "The requested endpoint %s does not exist"),
+    INTERNAL_FATAL_ERROR(9999L, "An unexpected internal error occurred. Please contact support.");
 
     private final Long code;
+    private final String message;
 
-    ErrorCode(Long code) {
+    ErrorCode(Long code, String message) {
         this.code = code;
+        this.message = message;
     }
 }
