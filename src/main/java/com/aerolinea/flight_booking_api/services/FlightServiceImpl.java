@@ -1,7 +1,5 @@
 package com.aerolinea.flight_booking_api.services;
 
-import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
