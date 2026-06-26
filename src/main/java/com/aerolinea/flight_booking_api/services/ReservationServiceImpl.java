@@ -5,6 +5,9 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +53,8 @@ public class ReservationServiceImpl implements ReservationService{
 
         User user = userRepository.findByUsername(username)
                                     .orElseThrow(()-> {
-                                        throw new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found with username: " + username);
+                                        throw new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND,
+                                             "User not found with username: " + username);
                                      });
         
         reservation.setUser(user);
@@ -61,7 +65,8 @@ public class ReservationServiceImpl implements ReservationService{
                                              "Flight not found with ID: " + reservationRequest.flightId()));
 
         if(flight.getAvailableSeats() < reservationRequest.numberOfPassengers()) {
-            throw new BusinessRuleViolationException(ErrorCode.NOT_ENOUGH_SEATS, "Not enough seats available for this flight with ID: " + reservationRequest.flightId());
+            throw new BusinessRuleViolationException(ErrorCode.NOT_ENOUGH_SEATS,
+                 "Not enough seats available for this flight with ID: " + reservationRequest.flightId());
         }
 
         flight.setAvailableSeats(flight.getAvailableSeats() - reservationRequest.numberOfPassengers());
@@ -92,8 +97,7 @@ public class ReservationServiceImpl implements ReservationService{
     @Transactional
     public void cancelReservation(Long idReservation) {
 
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
+        String username = getAuthenticator().getName();
     
         if(username == null) {
             throw new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND,
@@ -104,10 +108,9 @@ public class ReservationServiceImpl implements ReservationService{
                 new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND,
                  "Reservation not found with ID: " + idReservation));
 
-        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
         boolean isOwner = reservation.getUser() != null && reservation.getUser().getUsername().equals(username);
 
-        if(!isAdmin && !isOwner) {
+        if(!isAdmin() && !isOwner) {
             throw new BusinessRuleViolationException(ErrorCode.INSUFFICIENT_PERMISSIONS,
                      "User " + username +" lacks permissions to cancel Reservation ID: " + idReservation);
         }
@@ -134,6 +137,42 @@ public class ReservationServiceImpl implements ReservationService{
     }
 
 
+    @Override
+    public ReservationDTO getReservationByIdAndUsername(Long idReservation) {
+        return reservationMapper.toReservationDTO(
+                reservationRepository.findByIdAndUserUsername(idReservation, getAuthenticator().getName())
+            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND, 
+                "Reservation not found with ID: " + idReservation + " and username: " + getAuthenticator().getName())));
+    }
+
+    @Override
+    public ReservationDTO getReservationById(Long idReservation) {
+           return reservationMapper.toReservationDTO(
+                reservationRepository.findById(idReservation).orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND, 
+                "Reservation not found with ID: " + idReservation)));
+    }
+
+    @Override
+    public Page<ReservationDTO> getReservationsByUsername(Pageable pageable){
+        return reservationRepository.findByUserUsername(pageable, 
+            getAuthenticator().getName())
+            .map(reservationMapper::toReservationDTO);
+    }
+
+    @Override
+    public Page<ReservationDTO> getReservations(Pageable pageable){
+        return reservationRepository.findAll(pageable).map(reservationMapper::toReservationDTO);
+    }
+
+
+    private boolean isAdmin(){
+        return getAuthenticator().getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+    }
+
+    private Authentication getAuthenticator(){
+        return SecurityContextHolder.getContext().getAuthentication();
+    }
 
 
 }
