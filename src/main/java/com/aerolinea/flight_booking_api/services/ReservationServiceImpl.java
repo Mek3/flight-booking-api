@@ -69,7 +69,7 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setTotalPrice(totalPrice);
 
         reservation.setNumberOfPassengers(reservationRequest.numberOfPassengers());
-        reservation.setStatus(ReservationStatus.CONFIRMED);
+        reservation.setStatus(ReservationStatus.PENDING);
 
         String uuid = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         reservation.setReservationCode(uuid);
