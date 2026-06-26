@@ -154,6 +154,17 @@ public class ReservationServiceImpl implements ReservationService {
     public Page<ReservationDTO> getReservations(Pageable pageable) {
         return reservationRepository.findAll(pageable).map(reservationMapper::toReservationDTO);
     }
+  
+    @Override
+    public void confirmReservation(Long id) {
+       String username = getAuthenticator().getName();
+       Reservation reservation = reservationRepository.findByIdAndUserUsername(id, username)
+                            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND, 
+                                                String.format(ErrorCode.RESERVATION_NOT_FOUND.getMessage(), username)));
+        reservation.setStatus(ReservationStatus.CONFIRMED);
+        reservationRepository.save(reservation);
+        log.info("Reservation successfully confirmed ID: {}", id);
+    }
 
     private boolean isAdmin() {
         return getAuthenticator().getAuthorities().stream()
@@ -163,4 +174,5 @@ public class ReservationServiceImpl implements ReservationService {
     private Authentication getAuthenticator() {
         return SecurityContextHolder.getContext().getAuthentication();
     }
+
 }

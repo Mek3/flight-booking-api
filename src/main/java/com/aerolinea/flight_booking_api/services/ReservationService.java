@@ -20,4 +20,6 @@ public interface ReservationService {
 
      ReservationDTO getReservationById(Long idReservation);
 
+     public void confirmReservation(Long id);
+
 }

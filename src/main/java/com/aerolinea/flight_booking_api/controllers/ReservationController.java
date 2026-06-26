@@ -44,6 +44,12 @@ public class ReservationController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('USER')")
+    @PostMapping("/me/{id}/confirm")
+    public ResponseEntity<Void> confirmReservation(@PathVariable Long id) {
+        reservationService.confirmReservation(id);
+        return ResponseEntity.noContent().build();
+    }
 
     @PreAuthorize("hasRole('USER')")
     @GetMapping("/me/{id}")
