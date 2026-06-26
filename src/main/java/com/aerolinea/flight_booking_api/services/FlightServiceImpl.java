@@ -15,7 +15,7 @@ import lombok.AllArgsConstructor;
 
 @Service
 @AllArgsConstructor
-public class FlightServiceImpl implements FlightService{
+public class FlightServiceImpl implements FlightService {
 
     private final FlightRepository flightRepository;
     private final FlightMapper flightMapper;
@@ -24,12 +24,12 @@ public class FlightServiceImpl implements FlightService{
     public FlightDTO save(FlightDTO flightDTO) {
         return flightMapper.toFlightDTO(flightRepository.save(flightMapper.toFlight(flightDTO)));
     }
-    
 
     @Override
     public FlightDTO updateFlight(Long id, FlightDTO flightDTO) {
         Flight existingFlight = flightRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,"Flight not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
+                        String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), id)));
 
         flightMapper.updateFlightFromDTO(flightDTO, existingFlight);
 
@@ -38,11 +38,9 @@ public class FlightServiceImpl implements FlightService{
 
     @Override
     public FlightDTO flightById(Long id) {
-
-        return flightMapper.toFlightDTO(flightRepository.findById(id).orElseThrow(() ->  
-                new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
-                                        "Flight not found with ID: " + id)));
-
+        return flightMapper.toFlightDTO(flightRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
+                        String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), id))));
     }
 
     @Override
@@ -52,12 +50,10 @@ public class FlightServiceImpl implements FlightService{
 
     @Override
     public void deleteFlightById(Long id) {
-        if(!flightRepository.existsById(id)) {
+        if (!flightRepository.existsById(id)) {
             throw new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
-                                        "Flight not found with ID: " + id);
+                    String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), id));
         }
         flightRepository.deleteById(id);
     }
-
-
 }
