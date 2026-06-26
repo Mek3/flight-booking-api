@@ -53,7 +53,7 @@ public class ReservationController {
 
     @PreAuthorize("hasRole('USER')")
     @GetMapping("/me")
-    public ResponseEntity<Page<ReservationDTO>> getReservationsByUsername(@PageableDefault(size = 10, sort = "departureTime") Pageable pageable) {
+    public ResponseEntity<Page<ReservationDTO>> getReservationsByUsername(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
         return ResponseEntity.ok().body(reservationService.getReservationsByUsername(pageable));
     }
 
@@ -65,7 +65,7 @@ public class ReservationController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping()
-    public ResponseEntity<Page<ReservationDTO>> getReservations(@PageableDefault(size = 10, sort="departure") Pageable pageable) {
+    public ResponseEntity<Page<ReservationDTO>> getReservations(@PageableDefault(size = 10, sort= "createdAt") Pageable pageable) {
         return ResponseEntity.ok().body(reservationService.getReservations(pageable));
     }
     
