@@ -22,6 +22,11 @@ A RESTful API for managing flight reservations, built with Spring Boot. This pro
 * ✅ **Database Migrations:** Schema and data versioning strictly managed via Flyway.
 * ✅ **API Documentation:** Auto-generated Swagger UI / OpenAPI specification with security bypass for interactive endpoint testing.
 * ✅ **CORS Configuration:** Global Cross-Origin Resource Sharing filters configured for secure external frontend integration.
+* ✅ **Performance & Scalability:** Implemented pagination across Flight and Reservation data layers to efficiently handle large datasets and prevent memory exhaustion.
+* ✅ **Advanced Business Logic:** Engineered time-constrained cancellation flows (e.g., blocking cancellations within 24 hours of departure) and strict state machine transitions for reservations (Pending -> Confirmed / Expired).
+* ✅ **Background Workers:** Implemented an asynchronous `@Scheduled` cron job to automatically expire abandoned reservations and release locked flight seats. Employs advanced Spring AOP proxy management and isolated transaction boundaries (`Propagation.REQUIRES_NEW`) to prevent database deadlocks during mass processing.
+* ✅ **Error Handling Refactor:** Upgraded the existing global exception handler by eradicating hardcoded strings and implementing an `ErrorCode` enum template system, standardizing API responses across the service layer.
+* ✅ **Payment Simulation:** Integrated a mock payment gateway endpoint to facilitate end-to-end reservation confirmation testing without external third-party dependencies.
 
 ## ⚙️ How to run locally
 1. Clone the repository.
