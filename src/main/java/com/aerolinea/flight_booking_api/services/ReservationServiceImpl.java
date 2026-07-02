@@ -60,15 +60,11 @@ public class ReservationServiceImpl implements ReservationService {
     @Transactional
     public ReservationDTO createReservation(ReservationRequest reservationRequest) {
 
-        Reservation reservation = new Reservation();
-
         String username = getAuthenticator().getName();
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND,
                         String.format(ErrorCode.USER_NOT_FOUND.getMessage(), username)));
-
-        reservation.setUser(user);
 
         Flight flight = flightRepository.findById(reservationRequest.flightId())
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
@@ -79,17 +75,14 @@ public class ReservationServiceImpl implements ReservationService {
                     String.format(ErrorCode.NOT_ENOUGH_SEATS.getMessage(), reservationRequest.flightId()));
         }
 
-        flight.setAvailableSeats(flight.getAvailableSeats() - reservationRequest.numberOfPassengers());
-        reservation.setFlight(flight);
-
-        BigDecimal totalPrice = flight.getPrice().multiply(BigDecimal.valueOf(reservationRequest.numberOfPassengers()));
-        reservation.setTotalPrice(totalPrice);
-
-        reservation.setNumberOfPassengers(reservationRequest.numberOfPassengers());
-        reservation.setStatus(ReservationStatus.PENDING);
-
-        String uuid = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        reservation.setReservationCode(uuid);
+        Reservation reservation = Reservation.builder()
+                .reservationCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .status(ReservationStatus.PENDING)
+                .numberOfPassengers(reservationRequest.numberOfPassengers())
+                .totalPrice(flight.getPrice().multiply(BigDecimal.valueOf(reservationRequest.numberOfPassengers())))
+                .user(user)
+                .flight(flight)
+                .build();
 
         flightRepository.save(flight);
 
@@ -123,11 +116,6 @@ public class ReservationServiceImpl implements ReservationService {
                     String.format(ErrorCode.INSUFFICIENT_PERMISSIONS.getMessage(), username));
         }
 
-        if (reservation.getStatus().equals(ReservationStatus.CANCELLED)) {
-            throw new BusinessRuleViolationException(ErrorCode.RESERVATION_ALREADY_CANCELLED,
-                    String.format(ErrorCode.RESERVATION_ALREADY_CANCELLED.getMessage(), idReservation));
-        }
-
         if (reservation.getFlight() == null) {
             throw new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
                     String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), "unknown"));
@@ -139,9 +127,8 @@ public class ReservationServiceImpl implements ReservationService {
                     String.format(ErrorCode.CANCELLATION_TIME_EXPIRED.getMessage(), idReservation));
         }
 
-        reservation.setStatus(ReservationStatus.CANCELLED);
-        reservation.getFlight().setAvailableSeats(reservation.getFlight().getAvailableSeats() + reservation.getNumberOfPassengers());
-        reservationRepository.save(reservation);
+        reservation.cancelReservation();
+        reservation.getFlight().increaseAvailableSeats(reservation.getNumberOfPassengers());
     }
 
     @Override
@@ -178,40 +165,44 @@ public class ReservationServiceImpl implements ReservationService {
        Reservation reservation = reservationRepository.findByIdAndUserUsername(id, username)
                             .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND, 
                                                 String.format(ErrorCode.RESERVATION_NOT_FOUND.getMessage(), id)));
-        reservation.setStatus(ReservationStatus.CONFIRMED);
+        reservation.confirmReservation();
         reservationRepository.save(reservation);
         log.info("Reservation successfully confirmed ID: {}", id);
     }
 
-
     @Override
     public void expirePendingReservations() {
         
-        List<Reservation> expiredReservations = reservationRepository
-                .findByStatusAndCreatedAtBefore(ReservationStatus.PENDING, LocalDateTime.now().minusMinutes(15));
+        List<Long> expiredReservationIds = reservationRepository.findExpiredReservationIds(
+                ReservationStatus.PENDING, LocalDateTime.now().minusHours(15));
 
-        if (expiredReservations.isEmpty()) {
+        if (expiredReservationIds.isEmpty()) {
             return;
         }
 
-        log.info("Processing expiration for {} pending reservations.", expiredReservations.size());
+        log.info("Processing expiration for {} pending reservations.", expiredReservationIds.size());
 
         int successCount = 0;
-        for (Reservation reservation : expiredReservations) {
+        for (Long idReservation : expiredReservationIds) {
             try {
-                reservationService.processSingleExpiration(reservation);
+                reservationService.processSingleExpiration(idReservation);
                 successCount++;
             } catch (Exception e) {
-                log.error("Failed to expire reservation ID: {}. Reason: {}", reservation.getId(), e.getMessage());
+                log.error("Failed to expire reservation ID: {}. Reason: {}", idReservation, e.getMessage());
             }
         }
         
-        log.info("Successfully expired {}/{} reservations.", successCount, expiredReservations.size());
+        log.info("Successfully expired {}/{} reservations.", successCount, expiredReservationIds.size());
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processSingleExpiration(Reservation reservation) {
+    public void processSingleExpiration(Long idReservation) {
+
+        Reservation reservation = reservationRepository.findByIdWithFlight(idReservation)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND, 
+                                                    String.format(ErrorCode.RESERVATION_NOT_FOUND.getMessage(), idReservation)));
+
         Flight flight = reservation.getFlight();
 
         if (flight == null) {
@@ -219,12 +210,9 @@ public class ReservationServiceImpl implements ReservationService {
             return;
         }
 
-        flight.setAvailableSeats(flight.getAvailableSeats() + reservation.getNumberOfPassengers());
+        flight.increaseAvailableSeats(reservation.getNumberOfPassengers());
         
-        reservation.setStatus(ReservationStatus.EXPIRED);
-
-        reservationRepository.save(reservation);
-        flightRepository.save(flight); 
+        reservation.expireReservation();
 
         log.debug("Reservation {} expired. Seats restored to flight ID: {}", 
                 reservation.getReservationCode(), flight.getId());

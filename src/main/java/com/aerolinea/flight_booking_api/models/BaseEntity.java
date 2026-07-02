@@ -12,13 +12,11 @@ import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
 import lombok.Getter;
-import lombok.Setter;
 
 @Getter
-@Setter
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
-public class BaseEntity {
+public abstract class BaseEntity {
 
     @CreatedDate
     @Column(name="created_at", nullable=false, updatable=false)
@@ -30,18 +28,22 @@ public class BaseEntity {
 
     @LastModifiedDate
     @Column(name = "updated_at")
-    protected LocalDateTime updateAt;
+    protected LocalDateTime updatedAt;
 
     @LastModifiedBy
     @Column(name="updated_by")
-    protected String updateBy;
+    protected String updatedBy;
 
     @Column(name = "deleted_at")
-    protected LocalDateTime deleteAt;
+    protected LocalDateTime deletedAt;
 
     @Column(name="deleted_by")
-    protected String deleteBy;
+    protected String deletedBy;
 
 
+    public void markAsDeleted(String user) {
+        this.deletedAt = LocalDateTime.now();
+        this.deletedBy = user;
+    }
 
 }

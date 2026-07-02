@@ -12,7 +12,9 @@ public enum ErrorCode {
     // Reservation Domain (2000 - 2999)
     RESERVATION_NOT_FOUND(2001L, "Reservation not found with ID: %s"),
     RESERVATION_ALREADY_CANCELLED(2002L, "Reservation with ID: %s is already cancelled"),
-    CANCELLATION_TIME_EXPIRED(2003L, "Cancellations must be made at least 24 hours in advance. Reservation ID: %s"),
+    RESERVATION_ALREADY_CONFIRMED(2003L, "Reservation with ID: %s is already confirmed"),
+    RESERVATION_ALREADY_EXPIRED(2004L, "Reservation with ID: %s is already expired"),
+    CANCELLATION_TIME_EXPIRED(2005L, "Cancellations must be made at least 24 hours in advance. Reservation ID: %s"),
 
     // User & Security Domain (3000 - 3999)
     USER_NOT_FOUND(3001L, "User not found with username: %s"),
