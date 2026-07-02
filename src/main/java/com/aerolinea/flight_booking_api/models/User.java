@@ -1,9 +1,12 @@
 package com.aerolinea.flight_booking_api.models;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,17 +19,17 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "users")
+@SQLDelete(sql = "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLRestriction("deleted_at is NULL")
 @Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User  extends BaseEntity implements UserDetails {
 
     @Id
@@ -55,7 +58,17 @@ public class User  extends BaseEntity implements UserDetails {
     private Boolean isActive = true;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
-    private List<UserRoleAssignment> roles;
+    private List<UserRoleAssignment> roles = new ArrayList<UserRoleAssignment>();
+
+    @Builder
+    public User(String name, String surname, String email, String username, String password, String phone) {
+        this.name = name;
+        this.surname = surname;
+        this.email = email;
+        this.username = username;
+        this.password = password;
+        this.phone = phone;
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -67,21 +80,21 @@ public class User  extends BaseEntity implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return true; // Asumimos que las cuentas no caducan
+        return true; 
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true; // Asumimos que la cuenta no se bloquea por intentos fallidos
+        return true; 
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true; // Asumimos que las contraseñas no caducan
+        return true; 
     }
 
     @Override
     public boolean isEnabled() {
-        return this.isActive; // Vinculamos la seguridad de Spring a tu columna "is_active"
+        return this.isActive; 
     }
 }

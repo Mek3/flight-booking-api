@@ -25,6 +25,6 @@ public interface ReservationService {
 
      void expirePendingReservations();
 
-     void processSingleExpiration(Reservation reservation);
+     void processSingleExpiration(Long idReservation);
 
 }

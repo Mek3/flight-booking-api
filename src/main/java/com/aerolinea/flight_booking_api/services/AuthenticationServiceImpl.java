@@ -10,8 +10,6 @@ import com.aerolinea.flight_booking_api.dtos.LoginRequest;
 import com.aerolinea.flight_booking_api.dtos.RegisterRequest;
 import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationException;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
-import com.aerolinea.flight_booking_api.mappers.UserMapper;
-import com.aerolinea.flight_booking_api.models.Role;
 import com.aerolinea.flight_booking_api.models.User;
 import com.aerolinea.flight_booking_api.models.UserRoleAssignment;
 import com.aerolinea.flight_booking_api.repositories.RoleRepository;
@@ -28,7 +26,6 @@ public class AuthenticationServiceImpl implements AuthenticationService{
     private final RoleRepository roleRepository;
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
     private final JwtService jwtService;
-    private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
 
@@ -40,16 +37,19 @@ public class AuthenticationServiceImpl implements AuthenticationService{
             String.format(ErrorCode.USER_ALREADY_EXISTS.getMessage(), registerRequest.username()));
         }
 
-        User user = userMapper.toUser(registerRequest);
-        String encodePassword = passwordEncoder.encode(registerRequest.password());
-        user.setPassword(encodePassword);
+        User user = User.builder()
+                .name(registerRequest.name())
+                .surname(registerRequest.surname())
+                .email(registerRequest.email())
+                .username(registerRequest.username())
+                .password(passwordEncoder.encode(registerRequest.password()))
+                .phone(registerRequest.phone())
+                .build();
 
-        UserRoleAssignment userRoleAssignment = new UserRoleAssignment();
-        Role role = roleRepository.findByName("ROLE_USER");
+        UserRoleAssignment userRoleAssignment = UserRoleAssignment.builder()
+                                        .role(roleRepository.findByName("ROLE_USER"))
+                                        .user(user).build();
         
-        userRoleAssignment.setRole(role);
-        userRoleAssignment.setUser(user);
-
         userRoleAssignmentRepository.save(userRoleAssignment);
 
         return loginUser(new LoginRequest(registerRequest.username(), registerRequest.password()));
