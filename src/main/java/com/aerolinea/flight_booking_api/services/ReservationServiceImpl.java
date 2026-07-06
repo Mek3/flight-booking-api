@@ -75,8 +75,6 @@ public class ReservationServiceImpl implements ReservationService {
                     String.format(ErrorCode.NOT_ENOUGH_SEATS.getMessage(), reservationRequest.flightId()));
         }
 
-        flight.decreaseAvailableSeats(reservationRequest.numberOfPassengers());
-
         Reservation reservation = Reservation.builder()
                 .reservationCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .status(ReservationStatus.PENDING)
