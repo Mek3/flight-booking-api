@@ -5,7 +5,6 @@ import org.springframework.data.domain.Pageable;
 
 import com.aerolinea.flight_booking_api.dtos.ReservationDTO;
 import com.aerolinea.flight_booking_api.dtos.ReservationRequest;
-import com.aerolinea.flight_booking_api.models.Reservation;
 
 public interface ReservationService {
 
