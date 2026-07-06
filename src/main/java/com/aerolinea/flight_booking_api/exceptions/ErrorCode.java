@@ -28,9 +28,6 @@ public enum ErrorCode {
     DATABASE_CONFLICT(9002L, "Database conflict detected: %s"),
     METHOD_NOT_ALLOWED(9003L, "HTTP method %s is not supported for this endpoint"),
     ENDPOINT_NOT_FOUND(9004L, "The requested endpoint %s does not exist"),
-    CONCURRENCY_CONFLICT(9005L, "Concurrency conflict: The resource was modified by another transaction"),
-
-
     INTERNAL_FATAL_ERROR(9999L, "An unexpected internal error occurred. Please contact support.");
 
     private final Long code;

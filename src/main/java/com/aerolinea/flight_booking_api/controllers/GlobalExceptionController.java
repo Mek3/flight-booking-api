@@ -3,11 +3,9 @@ package com.aerolinea.flight_booking_api.controllers;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
-import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -147,25 +145,6 @@ public class GlobalExceptionController {
         );
 
         return ResponseEntity.status(appBaseException.getCodeStatusHttp()).body(apiError);
-    }
-
-
-    @ExceptionHandler({ObjectOptimisticLockingFailureException.class, CannotAcquireLockException.class})
-    public ResponseEntity<ApiError> handleConcurrencyFailure(Exception ex, WebRequest webRequest) {
-        String path = webRequest.getDescription(false).replace("uri=", "");
-        
-        log.warn("Optimistic locking or concurrency conflict detected: {} for URI: {}", ex.getMessage(), path);
-
-        ApiError apiError = new ApiError(
-                LocalDateTime.now(),
-                HttpStatus.CONFLICT.value(),
-                ErrorCode.CONCURRENCY_CONFLICT.getCode(), 
-                HttpStatus.CONFLICT.getReasonPhrase(),
-                "The resource was modified by another transaction. Please refresh and try again.",
-                path
-        );
-
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
     }
 
     
