@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +24,10 @@ import com.aerolinea.flight_booking_api.dtos.ReservationRequest;
 import com.aerolinea.flight_booking_api.models.Flight;
 import com.aerolinea.flight_booking_api.models.User;
 import com.aerolinea.flight_booking_api.repositories.FlightRepository;
+import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
+import com.aerolinea.flight_booking_api.repositories.RoleRepository;
 import com.aerolinea.flight_booking_api.repositories.UserRepository;
+import com.aerolinea.flight_booking_api.repositories.UserRoleAssignmentRepository;
 import com.aerolinea.flight_booking_api.services.ReservationService;
 
 public class FlightConcurrencyIntegrationTest extends AbstractIntegrationTest {
@@ -36,6 +40,15 @@ public class FlightConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ReservationRepository reservationRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private UserRoleAssignmentRepository roleUserRepository;
 
     private Long targetFlightId;
     private final String TEST_USERNAME = "concurrency_user";
@@ -73,6 +86,15 @@ public class FlightConcurrencyIntegrationTest extends AbstractIntegrationTest {
         } finally {
             SecurityContextHolder.clearContext();
         }
+    }
+
+    @AfterEach
+    void tearDown() {
+        reservationRepository.deleteAllInBatch();
+        flightRepository.deleteAllInBatch();
+        roleUserRepository.deleteAllInBatch();
+        userRepository.deleteAllInBatch();
+        roleRepository.deleteAllInBatch();
     }
 
     @Test

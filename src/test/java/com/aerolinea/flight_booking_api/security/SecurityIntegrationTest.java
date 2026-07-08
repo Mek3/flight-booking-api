@@ -8,18 +8,20 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.aerolinea.flight_booking_api.config.AbstractIntegrationTest;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class SecurityIntegrationTest {
+class SecurityIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private  MockMvc mockMvc;
@@ -41,12 +43,14 @@ class SecurityIntegrationTest {
     void shouldReturnForbiddenWhenUserRoleTriesToAccessAdminEndpoint() throws Exception {
       mockMvc.perform(delete("/api/v1/flights/1"))
                 .andExpect(status().isForbidden())
+                .andDo(print())
                 .andExpect(jsonPath("$.message").value(ErrorCode.ACCESS_DENIED.getMessage()))
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.internalCode").value(ErrorCode.ACCESS_DENIED.getCode()))
                 .andExpect(jsonPath("$.error").value("Forbidden"));
     }
 
+    
     @Test
     @DisplayName("Should allow access and return 404 Not Found when an ADMIN tries to delete a non-existent flight")
     @WithMockUser(roles = "ADMIN")

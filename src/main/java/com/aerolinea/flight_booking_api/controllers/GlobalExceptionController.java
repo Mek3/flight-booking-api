@@ -123,7 +123,7 @@ public class GlobalExceptionController {
         ApiError apiError = new ApiError(
             LocalDateTime.now(),
             HttpStatus.FORBIDDEN.value(),
-            ErrorCode.INSUFFICIENT_PERMISSIONS.getCode(),
+            ErrorCode.ACCESS_DENIED.getCode(),
             HttpStatus.FORBIDDEN.getReasonPhrase(),
             ErrorCode.ACCESS_DENIED.getMessage(),
             request.getDescription(false).replace("uri=", "")
