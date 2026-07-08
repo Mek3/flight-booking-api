@@ -37,8 +37,8 @@ public class GlobalExceptionController {
                 LocalDateTime.now(),
                 HttpStatus.METHOD_NOT_ALLOWED.value(),
                 ErrorCode.METHOD_NOT_ALLOWED.getCode(),
-                "Method Not Allowed",
-                ex.getMessage(),
+                HttpStatus.METHOD_NOT_ALLOWED.getReasonPhrase(),
+                String.format(ErrorCode.METHOD_NOT_ALLOWED.getMessage(), ex.getMethod()),
                 path
         );
         
@@ -49,14 +49,14 @@ public class GlobalExceptionController {
     public ResponseEntity<ApiError> handleNoResourceFoundException(NoResourceFoundException ex, WebRequest webRequest) {
         String path = webRequest.getDescription(false).replace("uri=", "");
     
-        log.warn("Enpoint not found: {}", path);
+        log.warn("Endpoint not found: {}", path);
         
         ApiError apiError = new ApiError(
                 LocalDateTime.now(),
                 HttpStatus.NOT_FOUND.value(),
                 ErrorCode.ENDPOINT_NOT_FOUND.getCode(),
-                "Not Found",
-                ex.getMessage(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                String.format(ErrorCode.ENDPOINT_NOT_FOUND.getMessage(), path),
                 path
         );
         
@@ -72,7 +72,7 @@ public class GlobalExceptionController {
             HttpStatus.UNAUTHORIZED.value(), 
             ErrorCode.INVALID_CREDENTIALS.getCode(), 
             HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-            "Invalid username or password.", 
+            ErrorCode.INVALID_CREDENTIALS.getMessage(),
             webRequest.getDescription(false).replace("uri=", "")
         );
     
@@ -107,7 +107,7 @@ public class GlobalExceptionController {
             HttpStatus.CONFLICT.value(),
             ErrorCode.DATABASE_CONFLICT.getCode(),
             HttpStatus.CONFLICT.getReasonPhrase(),
-            "Database integrity violation: The resource conflict suggests it may already exist or violates data constraints.",
+            ErrorCode.DATABASE_CONFLICT.getMessage(),
             request.getDescription(false).replace("uri=", "")
         );
 
@@ -125,7 +125,7 @@ public class GlobalExceptionController {
             HttpStatus.FORBIDDEN.value(),
             ErrorCode.INSUFFICIENT_PERMISSIONS.getCode(),
             HttpStatus.FORBIDDEN.getReasonPhrase(),
-            "Access Denied: You do not have the required roles to perform this action.",
+            ErrorCode.ACCESS_DENIED.getMessage(),
             request.getDescription(false).replace("uri=", "")
         );
     
@@ -161,7 +161,7 @@ public class GlobalExceptionController {
                 HttpStatus.CONFLICT.value(),
                 ErrorCode.CONCURRENCY_CONFLICT.getCode(), 
                 HttpStatus.CONFLICT.getReasonPhrase(),
-                "The resource was modified by another transaction. Please refresh and try again.",
+                ErrorCode.CONCURRENCY_CONFLICT.getMessage(),
                 path
         );
 
@@ -178,7 +178,7 @@ public class GlobalExceptionController {
             HttpStatus.INTERNAL_SERVER_ERROR.value(),
             ErrorCode.INTERNAL_FATAL_ERROR.getCode(),
             HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
-            "An unexpected error occurred. Please contact support.",
+            ErrorCode.INTERNAL_FATAL_ERROR.getMessage(),
             request.getDescription(false).replace("uri=", "")
         );
 

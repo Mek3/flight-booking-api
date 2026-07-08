@@ -22,10 +22,11 @@ public enum ErrorCode {
     INVALID_CREDENTIALS(3003L, "Invalid username or password"),             
     INVALID_OR_MISSING_TOKEN(3004L, "Authentication token is missing, invalid, or expired"),       
     INSUFFICIENT_PERMISSIONS(3005L, "User %s lacks permissions to access or modify this resource"),
+    ACCESS_DENIED(3006L, "Access Denied: You do not have the required roles to perform this action."),
 
     // System & Framework (9000 - 9999)
     VALIDATION_ERROR(9001L, "Validation error: %s"),
-    DATABASE_CONFLICT(9002L, "Database conflict detected: %s"),
+    DATABASE_CONFLICT(9002L, "Database conflict detected: The resource may already exist or violates data constraints"),
     METHOD_NOT_ALLOWED(9003L, "HTTP method %s is not supported for this endpoint"),
     ENDPOINT_NOT_FOUND(9004L, "The requested endpoint %s does not exist"),
     CONCURRENCY_CONFLICT(9005L, "Concurrency conflict: The resource was modified by another transaction"),
