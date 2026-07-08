@@ -35,7 +35,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint{
             HttpStatus.UNAUTHORIZED.value(),
             ErrorCode.INVALID_OR_MISSING_TOKEN.getCode(),
             HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-            "Unauthorized: Invalid, missing or expired JWT token.",
+            ErrorCode.INVALID_OR_MISSING_TOKEN.getMessage(),
             path
         );
 
