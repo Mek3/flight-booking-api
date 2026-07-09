@@ -27,6 +27,10 @@ A RESTful API for managing flight reservations, built with Spring Boot. This pro
 * ✅ **Background Workers:** Implemented an asynchronous `@Scheduled` cron job to automatically expire abandoned reservations and release locked flight seats. Employs advanced Spring AOP proxy management and isolated transaction boundaries (`Propagation.REQUIRES_NEW`) to prevent database deadlocks during mass processing.
 * ✅ **Error Handling Refactor:** Upgraded the existing global exception handler by eradicating hardcoded strings and implementing an `ErrorCode` enum template system, standardizing API responses across the service layer.
 * ✅ **Payment Simulation:** Integrated a mock payment gateway endpoint to facilitate end-to-end reservation confirmation testing without external third-party dependencies.
+* ✅ **Enterprise Testing Architecture:** Established a robust testing baseline using Testcontainers (Docker MySQL) with a Singleton Container pattern, ensuring 100% environment parity between local development and CI pipelines while preventing database contamination across test suites.
+* ✅ **Security & Integration Testing:** Implemented comprehensive `MockMvc` integration tests to strictly validate the RBAC layer, JWT authentication filters, IDOR protections, and the unified `ApiError` responses across both Servlet and MVC boundaries.
+* ✅ **Concurrency Stress Testing:** Engineered multi-threaded stress tests utilizing `ExecutorService` and `CountDownLatch` to mathematically prove zero seat overbooking during simultaneous purchase attempts, validating the JPA Optimistic Locking (`@Version`) mechanism under heavy load.
+* ✅ **Continuous Integration (CI):** Configured a GitHub Actions workflow to automatically provision an ephemeral environment, compile the application, and execute the entire Testcontainers suite on every Pull Request, establishing a strict quality gate against regressions.
 
 ## ⚙️ How to run locally
 1. Clone the repository.
