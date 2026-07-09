@@ -1,5 +1,7 @@
 # Flight Booking API ✈️
 
+[![CI Pipeline](https://github.com/Mek3/flight-booking-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Mek3/flight-booking-api/actions/workflows/ci.yml)
+
 A RESTful API for managing flight reservations, built with Spring Boot. This project serves as the core backend engine for an airline booking system, featuring advanced security, role-based access control, and concurrent data protection.
 
 ## 🛠️ Tech Stack
