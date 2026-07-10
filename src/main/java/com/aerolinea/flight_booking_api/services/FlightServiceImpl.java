@@ -5,11 +5,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.aerolinea.flight_booking_api.dtos.FlightDTO;
+import com.aerolinea.flight_booking_api.dtos.FlightSearchCriteria;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
 import com.aerolinea.flight_booking_api.mappers.FlightMapper;
 import com.aerolinea.flight_booking_api.models.Flight;
 import com.aerolinea.flight_booking_api.repositories.FlightRepository;
+import com.aerolinea.flight_booking_api.specifications.FlightSpecification;
 
 import lombok.AllArgsConstructor;
 
@@ -55,5 +57,18 @@ public class FlightServiceImpl implements FlightService {
                     String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), id));
         }
         flightRepository.deleteById(id);
+    }
+
+    @Override
+    public Page<FlightDTO> searchFlights(FlightSearchCriteria flightSearchCriteria, Pageable pageable) {
+        return flightRepository.findAll(
+                FlightSpecification.hasDeparture(flightSearchCriteria.departure())
+                        .and(FlightSpecification.hasDestination(flightSearchCriteria.destination()))
+                        .and(FlightSpecification.hasPriceGreaterThanOrEqualTo(flightSearchCriteria.minPrice()))
+                        .and(FlightSpecification.hasPriceLessThanOrEqualTo(flightSearchCriteria.maxPrice()))
+                        .and(FlightSpecification.hasMinimumAvailableSeats(flightSearchCriteria.minAvailableSeats()))
+                        .and(FlightSpecification.departsOnDate(flightSearchCriteria.date())),
+                pageable
+        ).map(flightMapper::toFlightDTO);
     }
 }
