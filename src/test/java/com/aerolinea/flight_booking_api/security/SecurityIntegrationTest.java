@@ -7,6 +7,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.aerolinea.flight_booking_api.config.AbstractIntegrationTest;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
@@ -21,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class SecurityIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
@@ -55,9 +57,10 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
     @DisplayName("Should allow access and return 404 Not Found when an ADMIN tries to delete a non-existent flight")
     @WithMockUser(roles = "ADMIN")
     void shouldReturnNotFoundWhenAdminRoleAccessesNonExistentAdminEndpoint() throws Exception {
-      mockMvc.perform(delete("/api/v1/flights/1"))
+        Long nonExistentFlightId = 9999L; 
+      mockMvc.perform(delete("/api/v1/flights/"+ nonExistentFlightId))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value(String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), 1)))
+                .andExpect(jsonPath("$.message").value(String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), nonExistentFlightId)))
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.internalCode").value(ErrorCode.FLIGHT_NOT_FOUND.getCode()))
                 .andExpect(jsonPath("$.error").value("Not Found"));

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -58,6 +59,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "flightSearchCache", allEntries = true)
     public ReservationDTO createReservation(ReservationRequest reservationRequest) {
 
         String username = getAuthenticator().getName();
@@ -98,6 +100,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "flightSearchCache", allEntries = true)
     public void cancelReservation(Long idReservation) {
 
         String username = getAuthenticator().getName();
@@ -162,6 +165,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
   
     @Override
+    @CacheEvict(value = "flightSearchCache", allEntries = true)
     public void confirmReservation(Long id) {
        String username = getAuthenticator().getName();
        Reservation reservation = reservationRepository.findByIdAndUserUsername(id, username)
@@ -198,6 +202,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @CacheEvict(value = "flightSearchCache", allEntries = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void processSingleExpiration(Long idReservation) {
 
