@@ -56,23 +56,23 @@ public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @DisplayName("Should use cache for repeated searches and evict it when a reservation is created")
-    @WithMockUser(username = "pacog", roles = "USER")
+    @WithMockUser(username = "UserCache", roles = "USER")
     void shouldCacheFlightSearchResultsAndEvictOnReservationCreation() {
 
          User testUser = User.builder()
-                .username("pacog")
-                .email("pacog@cachetest.com")
+                .username("UserCache")
+                .email("userCache@cachetest.com")
                 .password("encoded_pass")
-                .name("Paco")
-                .surname("G")
+                .name("UserCache")
+                .surname("UserCache")
                 .build();
         userRepository.save(testUser);
 
         Flight testFlight = Flight.builder()
                 .flightNumber("CACHE-999")
-                .departure("Madrid")
+                .departure("Londres")
                 .departureTime(LocalDateTime.now().plusDays(5))
-                .destination("Tokyo")
+                .destination("Budapest")
                 .destinationTime(LocalDateTime.now().plusDays(5).plusHours(12))
                 .availableSeats(10)
                 .price(new BigDecimal("500.00"))
@@ -80,7 +80,7 @@ public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
                 
         Flight savedFlight = flightRepository.save(testFlight);
 
-        FlightSearchCriteria criteria = new FlightSearchCriteria("Madrid", "Tokyo", null, null, null, null);
+        FlightSearchCriteria criteria = new FlightSearchCriteria("Londres", "Budapest", null, null, null, null);
         Pageable pageable = PageRequest.of(0, 10);
 
 
