@@ -1,5 +1,6 @@
 package com.aerolinea.flight_booking_api.services;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -58,8 +59,9 @@ public class FlightServiceImpl implements FlightService {
         }
         flightRepository.deleteById(id);
     }
-
+    
     @Override
+    @Cacheable(value = "flightSearchCache", keyGenerator = "flightSearchKeyGenerator")
     public Page<FlightDTO> searchFlights(FlightSearchCriteria flightSearchCriteria, Pageable pageable) {
         return flightRepository.findAll(
                 FlightSpecification.hasDeparture(flightSearchCriteria.departure())

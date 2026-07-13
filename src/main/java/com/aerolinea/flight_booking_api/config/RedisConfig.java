@@ -3,6 +3,7 @@ package com.aerolinea.flight_booking_api.config;
 import java.time.Duration;
 
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -29,6 +30,20 @@ public class RedisConfig {
                     .build();
 
 
+    }
+
+    @Bean("flightSearchKeyGenerator")
+    KeyGenerator keyGenerator() {
+        return (target, method, params) -> {
+            Object criteria = params[0];
+            Object pageable = params[1];
+
+            String criteriaString = criteria != null ? criteria.toString() : "";
+            String pageableString = pageable != null ? pageable.toString() : "";
+
+            String rawKey = criteriaString + ":" + pageableString;
+            return rawKey.replaceAll("[^a-zA-Z0-9]", "_");
+        };
     }
 
 }
