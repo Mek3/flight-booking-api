@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.aerolinea.flight_booking_api.config.RestPageImpl;
 import com.aerolinea.flight_booking_api.dtos.FlightDTO;
 import com.aerolinea.flight_booking_api.dtos.FlightSearchCriteria;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
@@ -63,7 +64,7 @@ public class FlightServiceImpl implements FlightService {
     @Override
     @Cacheable(value = "flightSearchCache", keyGenerator = "flightSearchKeyGenerator")
     public Page<FlightDTO> searchFlights(FlightSearchCriteria flightSearchCriteria, Pageable pageable) {
-        return flightRepository.findAll(
+       Page<FlightDTO> dtoPage= flightRepository.findAll(
                 FlightSpecification.hasDeparture(flightSearchCriteria.departure())
                         .and(FlightSpecification.hasDestination(flightSearchCriteria.destination()))
                         .and(FlightSpecification.hasPriceGreaterThanOrEqualTo(flightSearchCriteria.minPrice()))
@@ -72,5 +73,7 @@ public class FlightServiceImpl implements FlightService {
                         .and(FlightSpecification.departsOnDate(flightSearchCriteria.date())),
                 pageable
         ).map(flightMapper::toFlightDTO);
+
+        return new RestPageImpl<FlightDTO>(dtoPage.getContent(), pageable.getPageNumber(), pageable.getPageSize(), dtoPage.getTotalElements());
     }
 }

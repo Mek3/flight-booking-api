@@ -31,8 +31,8 @@ public abstract class AbstractIntegrationTest {
 
         registery.add("spring.jpa.hibernate.ddl-auto", () -> "none");
         
-        registery.add("spring.redis.host", redisContainer::getHost);
-        registery.add("spring.redis.port", () -> String.valueOf(redisContainer.getMappedPort(6379)));
+        registery.add("spring.data.redis.host", redisContainer::getHost);
+        registery.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
     }
 
 }
