@@ -8,6 +8,7 @@ A RESTful API for managing flight reservations, built with Spring Boot. This pro
 * **Framework:** Spring Boot 3.x
 * **Language:** Java (using modern features like `Records`)
 * **Database:** MySQL & Spring Data JPA
+* **Cache:** Redis
 * **Security:** Spring Security with JWT (JSON Web Tokens)
 
 ## 🚀 Current Status & Features
@@ -33,12 +34,18 @@ A RESTful API for managing flight reservations, built with Spring Boot. This pro
 * ✅ **Security & Integration Testing:** Implemented comprehensive `MockMvc` integration tests to strictly validate the RBAC layer, JWT authentication filters, IDOR protections, and the unified `ApiError` responses across both Servlet and MVC boundaries.
 * ✅ **Concurrency Stress Testing:** Engineered multi-threaded stress tests utilizing `ExecutorService` and `CountDownLatch` to mathematically prove zero seat overbooking during simultaneous purchase attempts, validating the JPA Optimistic Locking (`@Version`) mechanism under heavy load.
 * ✅ **Continuous Integration (CI):** Configured a GitHub Actions workflow to automatically provision an ephemeral environment, compile the application, and execute the entire Testcontainers suite on every Pull Request, establishing a strict quality gate against regressions.
+* ✅ **Dynamic Search Engine:** Migrated rigid repository methods to Spring Data JPA Specifications (Criteria API), enabling flexible, multi-parameter flight filtering (dates, price ranges, destinations) seamlessly integrated with pagination.
+* ✅ **High-Performance Caching:** Integrated Redis to serve read-heavy flight search queries directly from RAM. Engineered a robust cache invalidation strategy (`@CacheEvict`) tied to reservation events (create, cancel, confirm, expire) to guarantee zero stale data regarding seat availability.
+* ✅ **Secure Polymorphic Deserialization:** Hardened the Jackson `ObjectMapper` with a strict `BasicPolymorphicTypeValidator` to safely serialize objects to Redis without exposing the application to Remote Code Execution (RCE) vulnerabilities. Engineered a custom `RestPageImpl` wrapper to natively deserialize Spring Data's `PageImpl` interfaces from JSON.
+* ✅ **Unit Testing & Immutability:** Established a fast-executing Mockito test suite for complex business logic (e.g., 24-hour cancellation rules). Leveraged `ReflectionTestUtils` to safely inject mock states into strict, builder-pattern immutable entities without compromising encapsulation (no public setters).
+* ✅ **Advanced Test Isolation:** Eliminated state leakage (flaky tests) in CI/CD pipelines. Refactored IDOR security tests to use out-of-bounds IDs, adopted the AAA (Arrange, Act, Assert) pattern with dynamic test data seeding to bypass MySQL auto-increment unpredictability, and replaced `@Transactional` in concurrency tests with surgical `JdbcTemplate` teardowns to validate true database-level Optimistic Locking.
 
 ## ⚙️ How to run locally
 1. Clone the repository.
-2. Ensure MySQL is running and update `application.properties` with your database credentials.
-3. Run the application via your IDE or using Maven.
-4. **Note:** Database schema creation and initial test data injection (Users, Roles, Flights) are automatically handled upon startup via **Flyway migrations** (V1 & V2), completely replacing manual data seeders.
+2. **To run the live server:** Ensure **MySQL** and **Redis** are running locally, and update `application.properties` with your credentials.
+3. Run the application via your IDE or using Maven. 
+   * *Note: Database schema creation and initial test data injection (Users, Roles, Flights) are automatically handled upon startup via **Flyway migrations**, replacing manual data seeders.*
+4. **To run the tests:** Simply execute `mvn test` (Testcontainers will automatically spin up ephemeral MySQL and Redis containers with zero configuration).
 
 ## 🔐 Authentication & Authorization (Testing via Postman)
 The API strictly enforces role-based access. 
