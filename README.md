@@ -42,10 +42,10 @@ A RESTful API for managing flight reservations, built with Spring Boot. This pro
 
 ## ⚙️ How to run locally
 1. Clone the repository.
-2. **To run the live server:** Ensure **MySQL** and **Redis** are running locally, and update `application.properties` with your credentials.
+2. **To run the application (for manual testing via Postman/Swagger):** Ensure **MySQL** and **Redis** are running locally, and update `application.properties` with your credentials.
 3. Run the application via your IDE or using Maven. 
    * *Note: Database schema creation and initial test data injection (Users, Roles, Flights) are automatically handled upon startup via **Flyway migrations**, replacing manual data seeders.*
-4. **To run the tests:** Simply execute `mvn test` (Testcontainers will automatically spin up ephemeral MySQL and Redis containers with zero configuration).
+4. **To run the automated tests:** Simply execute `mvn test` (Testcontainers will automatically spin up ephemeral MySQL and Redis containers with zero configuration).
 
 ## 🔐 Authentication & Authorization (Testing via Postman)
 The API strictly enforces role-based access. 
