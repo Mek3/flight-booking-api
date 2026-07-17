@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
@@ -29,6 +30,7 @@ import com.aerolinea.flight_booking_api.repositories.UserRepository;
 import com.aerolinea.flight_booking_api.services.FlightService;
 import com.aerolinea.flight_booking_api.services.ReservationService;
 
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Transactional
 public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
 

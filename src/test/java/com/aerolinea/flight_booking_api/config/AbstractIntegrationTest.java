@@ -1,12 +1,13 @@
 package com.aerolinea.flight_booking_api.config;
 
-import org.springframework.boot.test.context.SpringBootTest;
+import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class AbstractIntegrationTest {
 
     @SuppressWarnings("resource")
@@ -24,15 +25,23 @@ public abstract class AbstractIntegrationTest {
     }
 
     @DynamicPropertySource
-    static void configureTestProperties(DynamicPropertyRegistry registery) {
-        registery.add("spring.datasource.url", mySQLContainer::getJdbcUrl);
-        registery.add("spring.datasource.username", mySQLContainer::getUsername);
-        registery.add("spring.datasource.password", mySQLContainer::getPassword);
+    static void configureTestProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", mySQLContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", mySQLContainer::getUsername);
+        registry.add("spring.datasource.password", mySQLContainer::getPassword);
 
-        registery.add("spring.jpa.hibernate.ddl-auto", () -> "none");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
         
-        registery.add("spring.data.redis.host", redisContainer::getHost);
-        registery.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
+        registry.add("spring.data.redis.host", redisContainer::getHost);
+        registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
+
+        registry.add("spring.flyway.clean-disabled", () -> "false");
+    }
+
+    @BeforeEach
+    void clearDatabase(@Autowired Flyway flyway) {
+        flyway.clean();
+        flyway.migrate();
     }
 
 }
