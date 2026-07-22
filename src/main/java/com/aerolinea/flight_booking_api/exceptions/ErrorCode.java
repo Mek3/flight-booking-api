@@ -24,6 +24,9 @@ public enum ErrorCode {
     INSUFFICIENT_PERMISSIONS(3005L, "User %s lacks permissions to access or modify this resource"),
     ACCESS_DENIED(3006L, "Access Denied: You do not have the required roles to perform this action."),
 
+    // Airport Domain (4000 - 4999)
+    AIRPORT_NOT_FOUND(4001L, "Airport not found with ID: %s"),
+
     // System & Framework (9000 - 9999)
     VALIDATION_ERROR(9001L, "Validation error: %s"),
     DATABASE_CONFLICT(9002L, "Database conflict detected: The resource may already exist or violates data constraints"),

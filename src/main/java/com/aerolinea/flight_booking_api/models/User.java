@@ -70,6 +70,19 @@ public class User  extends BaseEntity implements UserDetails {
         this.phone = phone;
     }
 
+    public void addRole(Role role) {
+        if (this.roles == null) {
+            this.roles = new ArrayList<>();
+        }
+        
+        UserRoleAssignment assignment = UserRoleAssignment.builder()
+                .user(this)
+                .role(role)
+                .build();
+                
+        this.roles.add(assignment);
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if(roles == null) 

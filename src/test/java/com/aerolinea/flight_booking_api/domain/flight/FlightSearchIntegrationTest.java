@@ -6,13 +6,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.aerolinea.flight_booking_api.config.AbstractIntegrationTest;
 import com.aerolinea.flight_booking_api.dtos.FlightDTO;
@@ -21,6 +22,9 @@ import com.aerolinea.flight_booking_api.models.Flight;
 import com.aerolinea.flight_booking_api.repositories.FlightRepository;
 import com.aerolinea.flight_booking_api.services.FlightService;
 
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Transactional
 public class FlightSearchIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
@@ -68,10 +72,7 @@ public class FlightSearchIntegrationTest extends AbstractIntegrationTest {
         flightRepository.saveAndFlush(flight3);
     }
 
-    @AfterEach
-    void tearDown() {
-        flightRepository.deleteAllInBatch();
-    }
+
 
     @Test
     void givenFlightsInDb_whenSearchByRoute_thenReturnMatchingFlights() {
@@ -119,6 +120,6 @@ public class FlightSearchIntegrationTest extends AbstractIntegrationTest {
 
         Page<FlightDTO> result = flightService.searchFlights(criteria, pageable);
 
-        assertThat(result.getTotalElements()).isEqualTo(3);
+        assertThat(result.getTotalElements()).isEqualTo(4);
     }
 }

@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,6 +28,7 @@ import com.aerolinea.flight_booking_api.repositories.FlightRepository;
 import com.aerolinea.flight_booking_api.repositories.UserRepository;
 import com.aerolinea.flight_booking_api.services.ReservationService;
 
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class FlightConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
