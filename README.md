@@ -10,6 +10,7 @@ A RESTful API for managing flight reservations, built with Spring Boot. This pro
 * **Database:** MySQL & Spring Data JPA
 * **Cache:** Redis
 * **Security:** Spring Security with JWT (JSON Web Tokens)
+* **Testing:** JUnit 5, Mockito, Testcontainers, and MockMvc
 
 ## 🚀 Current Status & Features
 * ✅ **Core Architecture:** Domain models and relational database mapping configured.
