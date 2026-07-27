@@ -115,6 +115,30 @@ public class AircraftModelRepositoryTest extends AbstractIntegrationTest {
 
     }
 
+    @Test
+    void shouldExistsAircraftModelByManufacturerAndModelNameReturnTrue(){
+        AircraftModel anotherAircraft = AircraftModel.builder()
+                .manufacturer("Airbus")
+                .modelName("A320neo")
+                .maxCapacity((short) 195)
+                .build();
+
+        AircraftModel aircraftModelSaved = entityManagerTest.persistAndFlush(anotherAircraft);
+        entityManagerTest.clear();
+
+        boolean resultTrue = aircraftModelRepository.existsAircraftModelByManufacturerAndModelName(aircraftModelSaved.getManufacturer(), aircraftModelSaved.getModelName());
+        assertThat(resultTrue).isTrue();
+       
+    }
+    
+    @Test
+    void ShouldExistsAircraftModelByManufacturerAndModelNameReturnFalse(){
+       
+        Boolean resultFalse = aircraftModelRepository
+                        .existsAircraftModelByManufacturerAndModelName("Boing", "737");
+        assertThat(resultFalse).isFalse();
+    }
+
 
 
 
