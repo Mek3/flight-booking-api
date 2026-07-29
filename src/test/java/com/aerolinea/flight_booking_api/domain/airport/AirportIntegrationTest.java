@@ -6,11 +6,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
-import com.aerolinea.flight_booking_api.config.BaseWebIntegrationTest;
+import com.aerolinea.flight_booking_api.config.AbstractWebIntegrationTest;
 import com.aerolinea.flight_booking_api.dtos.airport.AirportRequest;
 
 
-public class AirportIntegrationTest extends BaseWebIntegrationTest {
+public class AirportIntegrationTest extends AbstractWebIntegrationTest {
 
 
     @Test

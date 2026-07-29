@@ -15,7 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(JpaConfig.class)
-public abstract class BaseJpaTest extends AbstractIntegrationTest {
+public abstract class AbstractJpaTest extends AbstractIntegrationTest {
 
     @Autowired
     protected TestEntityManager entityManager;

@@ -4,12 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.aerolinea.flight_booking_api.config.BaseJpaTest;
+import com.aerolinea.flight_booking_api.config.AbstractJpaTest;
 import com.aerolinea.flight_booking_api.models.Aircraft;
 import com.aerolinea.flight_booking_api.models.AircraftModel;
 import com.aerolinea.flight_booking_api.repositories.AircraftRepository;
 
-public class AircraftRepositoryTest extends BaseJpaTest {
+public class AircraftRepositoryTest extends AbstractJpaTest {
 
     @Autowired
     private AircraftRepository aircraftRepository;

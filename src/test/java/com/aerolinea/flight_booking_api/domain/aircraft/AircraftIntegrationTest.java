@@ -4,13 +4,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
-import com.aerolinea.flight_booking_api.config.BaseWebIntegrationTest;
+import com.aerolinea.flight_booking_api.config.AbstractWebIntegrationTest;
 import com.aerolinea.flight_booking_api.dtos.aircraft.AircraftRequest;
 import com.aerolinea.flight_booking_api.dtos.aircraft.AircraftResponse;
 import com.aerolinea.flight_booking_api.dtos.aircraftmodel.AircraftModelRequest;
 import com.aerolinea.flight_booking_api.dtos.aircraftmodel.AircraftModelResponse;
 
-public class AircraftIntegrationTest extends BaseWebIntegrationTest {
+public class AircraftIntegrationTest extends AbstractWebIntegrationTest {
 
     
     private Long createDependencyModel() {

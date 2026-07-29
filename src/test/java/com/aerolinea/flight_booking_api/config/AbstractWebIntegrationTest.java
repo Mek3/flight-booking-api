@@ -17,7 +17,7 @@ import com.aerolinea.flight_booking_api.services.JwtService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
-public abstract class BaseWebIntegrationTest extends AbstractIntegrationTest {
+public abstract class AbstractWebIntegrationTest extends AbstractIntegrationTest {
     
     @Autowired
     protected WebTestClient webTestClient;

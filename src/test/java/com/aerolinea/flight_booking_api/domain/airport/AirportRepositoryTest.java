@@ -8,12 +8,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.aerolinea.flight_booking_api.config.BaseJpaTest;
+import com.aerolinea.flight_booking_api.config.AbstractJpaTest;
 import com.aerolinea.flight_booking_api.models.Airport;
 import com.aerolinea.flight_booking_api.repositories.AirportRepository;
 
 
-public class AirportRepositoryTest extends  BaseJpaTest {
+public class AirportRepositoryTest extends  AbstractJpaTest {
 
     @Autowired
     private AirportRepository airportRepository;
