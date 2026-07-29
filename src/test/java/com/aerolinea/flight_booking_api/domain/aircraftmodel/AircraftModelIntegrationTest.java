@@ -1,8 +1,9 @@
-package com.aerolinea.flight_booking_api.domain.airport;
+package com.aerolinea.flight_booking_api.domain.aircraftmodel;
 
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -10,22 +11,22 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.security.core.Authentication;
 
 import com.aerolinea.flight_booking_api.config.AbstractIntegrationTest;
-import com.aerolinea.flight_booking_api.dtos.airport.AirportRequest;
+import com.aerolinea.flight_booking_api.dtos.aircraftmodel.AircraftModelRequest;
+import com.aerolinea.flight_booking_api.dtos.aircraftmodel.AircraftModelResponse;
 import com.aerolinea.flight_booking_api.models.Role;
 import com.aerolinea.flight_booking_api.models.User;
 import com.aerolinea.flight_booking_api.services.JwtService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
-public class AirportIntegrationTest extends AbstractIntegrationTest{
-
+public class AircraftModelIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private JwtService jwtService;
@@ -49,7 +50,7 @@ public class AirportIntegrationTest extends AbstractIntegrationTest{
                 .surname("Admin")
                 .email("admin@flightapi.com")
                 .username(username)
-                .password("dummy_password") 
+                .password("dummy_password")
                 .phone("555-0199")
                 .build();
 
@@ -63,43 +64,41 @@ public class AirportIntegrationTest extends AbstractIntegrationTest{
         Authentication adminAuth = new UsernamePasswordAuthenticationToken(
                 adminUser,
                 null,
-                adminUser.getAuthorities() 
+                adminUser.getAuthorities()
         );
 
+        this.adminJwtToken = jwtService.generateToken(adminAuth);
 
-       this.adminJwtToken = jwtService.generateToken(adminAuth);
-
-       when(userDetailsServiceMock.loadUserByUsername(username)).thenReturn(adminUser);
+        when(userDetailsServiceMock.loadUserByUsername(username)).thenReturn(adminUser);
     }
 
     @Test
-    void createAirport_ShouldReturn201_WhenPayloadIsValidAndUserIsAdmin() {
-        AirportRequest airportRequest = new AirportRequest("JFK", "John F. Kennedy", "New York", "USA");
+    void createAircraftModel_ShouldReturn201_WhenPayloadIsValidAndUserIsAdmin() {
+        AircraftModelRequest request = new AircraftModelRequest("Airbus", "A320-Neo-Test1", (short)180);
 
         webTestClient.post()
-            .uri("/api/v1/airports")
+            .uri("/api/v1/aircraft-models")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken)
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(airportRequest)
+            .bodyValue(request)
             .exchange()
             .expectStatus().isCreated()
             .expectHeader().contentType(MediaType.APPLICATION_JSON)
             .expectBody()
             .jsonPath("$.id").isNumber()
-            .jsonPath("$.code").isEqualTo("JFK")
-            .jsonPath("$.city").isEqualTo("New York");
-
+            .jsonPath("$.manufacturer").isEqualTo("Airbus")
+            .jsonPath("$.modelName").isEqualTo("A320-Neo-Test1");
     }
 
     @Test
-    void createAirport_ShouldReturn400_WhenPayloadIsInValid() {
-         AirportRequest airportRequest = new AirportRequest("", "", "", "");
+    void createAircraftModel_ShouldReturn400_WhenPayloadIsInvalid() {
+        AircraftModelRequest request = new AircraftModelRequest("", "",(short) -10);
 
         webTestClient.post()
-            .uri("/api/v1/airports")
+            .uri("/api/v1/aircraft-models")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken)
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(airportRequest)
+            .bodyValue(request)
             .exchange()
             .expectStatus().isBadRequest()
             .expectHeader().contentType(MediaType.APPLICATION_JSON)
@@ -109,16 +108,43 @@ public class AirportIntegrationTest extends AbstractIntegrationTest{
     }
 
     @Test
-    void getAllAirports_ShouldReturn200__WhenQueryParametersAreValid(){
-
+    void getAllAircraftModels_ShouldReturn200_WhenQueryParametersAreValid() {
         webTestClient.get()
-            .uri("/api/v1/airports?size=10&sort=name")
+            .uri("/api/v1/aircraft-models?size=5&sort=manufacturer")
             .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken)
             .accept(MediaType.APPLICATION_JSON)
             .exchange()
             .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON);
-            
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.content").isArray()
+            .jsonPath("$.pageable").exists();
     }
 
+    @Test
+    void deleteAircraftModel_ShouldReturn204_WhenUserIsAdminAndIdExists() {
+        Integer idToDelete = webTestClient.post()
+            .uri("/api/v1/aircraft-models")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(new AircraftModelRequest("Boeing", "787-Test-Delete", (short) 250))
+            .exchange()
+            .expectStatus().isCreated()
+            .expectBody(AircraftModelResponse.class)
+            .returnResult()
+            .getResponseBody()
+            .id().intValue();
+
+        webTestClient.delete()
+            .uri("/api/v1/aircraft-models/" + idToDelete)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken)
+            .exchange()
+            .expectStatus().isNoContent();
+            
+        webTestClient.get()
+            .uri("/api/v1/aircraft-models/" + idToDelete)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminJwtToken)
+            .exchange()
+            .expectStatus().isNotFound();
+    }
 }

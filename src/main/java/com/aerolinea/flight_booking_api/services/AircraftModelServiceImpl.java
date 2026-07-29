@@ -2,6 +2,7 @@ package com.aerolinea.flight_booking_api.services;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.aerolinea.flight_booking_api.dtos.aircraftmodel.AircraftModelRequest;
@@ -16,6 +17,7 @@ import com.aerolinea.flight_booking_api.repositories.AircraftModelRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+@Service
 @Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
