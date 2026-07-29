@@ -27,6 +27,11 @@ public enum ErrorCode {
     // Airport Domain (4000 - 4999)
     AIRPORT_NOT_FOUND(4001L, "Airport not found with ID: %s"),
 
+    // Aircraft Model Domain (5000 - 5999)
+    AIRCRAFT_MODEL_NOT_FOUND(5001L, "Aircraft model not found with ID: %s"),
+    AIRCRAFT_MODEL_IN_USE(5002L, "Aircraft model with ID: %s cannot be deleted because it is assigned to existing flights"),
+    AIRCRAFT_MODEL_ALREADY_EXISTS(5003L, "An aircraft model with the specified manufacturer '%s' and model name '%s' already exists"),
+
     // System & Framework (9000 - 9999)
     VALIDATION_ERROR(9001L, "Validation error: %s"),
     DATABASE_CONFLICT(9002L, "Database conflict detected: The resource may already exist or violates data constraints"),

@@ -98,7 +98,7 @@ public class AirportRepositoryTest extends AbstractIntegrationTest {
         entityManager.clear();
 
         Airport retrievedToDelete = airportRepository.findById(savedAirport.getId()).orElseThrow();
-        retrievedToDelete.markAsDeleted("system_admin"); // Execute the domain logic
+        retrievedToDelete.markAsDeleted("system_admin"); 
         airportRepository.saveAndFlush(retrievedToDelete);
         entityManager.clear();
 
