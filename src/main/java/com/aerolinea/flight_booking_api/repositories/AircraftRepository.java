@@ -6,6 +6,6 @@ import com.aerolinea.flight_booking_api.models.Aircraft;
 
 public interface AircraftRepository extends JpaRepository<Aircraft, Long> {
 
-    
+    boolean existsByRegistrationNumber(String registrationNumber);
 
 }
