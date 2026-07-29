@@ -22,8 +22,7 @@ import com.aerolinea.flight_booking_api.models.Flight;
 import com.aerolinea.flight_booking_api.repositories.FlightRepository;
 import com.aerolinea.flight_booking_api.services.FlightService;
 
-
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest
 @Transactional
 public class FlightSearchIntegrationTest extends AbstractIntegrationTest {
 
@@ -72,8 +71,6 @@ public class FlightSearchIntegrationTest extends AbstractIntegrationTest {
         flightRepository.saveAndFlush(flight3);
     }
 
-
-
     @Test
     void givenFlightsInDb_whenSearchByRoute_thenReturnMatchingFlights() {
         FlightSearchCriteria criteria = new FlightSearchCriteria("MAD", "JFK", null, null, null, null);
@@ -81,7 +78,9 @@ public class FlightSearchIntegrationTest extends AbstractIntegrationTest {
         Page<FlightDTO> result = flightService.searchFlights(criteria, pageable);
 
         assertThat(result.getContent()).hasSize(2);
-        assertThat(result.getContent()).extracting(FlightDTO::getFlightNumber).containsExactlyInAnyOrder("IBE-001", "IBE-002");
+        assertThat(result.getContent())
+                .extracting(FlightDTO::getFlightNumber)
+                .containsExactlyInAnyOrder("IBE-001", "IBE-002");
     }
 
     @Test
@@ -91,7 +90,9 @@ public class FlightSearchIntegrationTest extends AbstractIntegrationTest {
         Page<FlightDTO> result = flightService.searchFlights(criteria, pageable);
 
         assertThat(result.getContent()).hasSize(2);
-        assertThat(result.getContent()).extracting(FlightDTO::getFlightNumber).containsExactlyInAnyOrder("IBE-002", "AEA-003");
+        assertThat(result.getContent())
+                .extracting(FlightDTO::getFlightNumber)
+                .containsExactlyInAnyOrder("IBE-002", "AEA-003");
     }
 
     @Test
@@ -101,7 +102,9 @@ public class FlightSearchIntegrationTest extends AbstractIntegrationTest {
         Page<FlightDTO> result = flightService.searchFlights(criteria, pageable);
 
         assertThat(result.getContent()).hasSize(2);
-        assertThat(result.getContent()).extracting(FlightDTO::getFlightNumber).containsExactlyInAnyOrder("IBE-001", "IBE-002");
+        assertThat(result.getContent())
+                .extracting(FlightDTO::getFlightNumber)
+                .containsExactlyInAnyOrder("IBE-001", "IBE-002");
     }
 
     @Test
@@ -120,6 +123,6 @@ public class FlightSearchIntegrationTest extends AbstractIntegrationTest {
 
         Page<FlightDTO> result = flightService.searchFlights(criteria, pageable);
 
-        assertThat(result.getTotalElements()).isEqualTo(4);
+        assertThat(result.getTotalElements()).isEqualTo(4L);
     }
 }
