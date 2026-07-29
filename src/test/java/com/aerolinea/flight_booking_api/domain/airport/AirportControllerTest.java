@@ -3,18 +3,14 @@ package com.aerolinea.flight_booking_api.domain.airport;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -31,33 +27,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 
+import com.aerolinea.flight_booking_api.config.AbstractControllerTest;
 import com.aerolinea.flight_booking_api.controllers.AirportController;
 import com.aerolinea.flight_booking_api.dtos.airport.AirportRequest;
 import com.aerolinea.flight_booking_api.dtos.airport.AirportResponse;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
 import com.aerolinea.flight_booking_api.models.Airport;
-import com.aerolinea.flight_booking_api.security.CustomAccessDeniedHandler;
-import com.aerolinea.flight_booking_api.security.JwtAuthenticationEntryPoint;
-import com.aerolinea.flight_booking_api.security.SecurityConfig;
 import com.aerolinea.flight_booking_api.services.AirportService;
-import com.aerolinea.flight_booking_api.services.JwtService;
 
 @WebMvcTest(AirportController.class)
-@Import({SecurityConfig.class, JwtAuthenticationEntryPoint.class, CustomAccessDeniedHandler.class})
-public class AirportControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
+public class AirportControllerTest extends AbstractControllerTest {
 
     @MockitoBean
     private AirportService airportService;
-
-    @MockitoBean
-    private JwtService jwtService;
-
-    @MockitoBean
-    private UserDetailsService userDetailsService;
 
     private Airport airport;
     private AirportRequest airportRequest;

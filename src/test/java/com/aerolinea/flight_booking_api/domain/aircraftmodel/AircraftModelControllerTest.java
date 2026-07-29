@@ -18,44 +18,27 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
 
+import com.aerolinea.flight_booking_api.config.AbstractControllerTest;
 import com.aerolinea.flight_booking_api.controllers.AircraftModelController;
 import com.aerolinea.flight_booking_api.dtos.aircraftmodel.AircraftModelRequest;
 import com.aerolinea.flight_booking_api.dtos.aircraftmodel.AircraftModelResponse;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
-import com.aerolinea.flight_booking_api.security.CustomAccessDeniedHandler;
-import com.aerolinea.flight_booking_api.security.JwtAuthenticationEntryPoint;
-import com.aerolinea.flight_booking_api.security.SecurityConfig;
 import com.aerolinea.flight_booking_api.services.AircraftModelService;
-import com.aerolinea.flight_booking_api.services.JwtService;
 
 @WebMvcTest(AircraftModelController.class)
-@Import({SecurityConfig.class, JwtAuthenticationEntryPoint.class, CustomAccessDeniedHandler.class})
-public class AircraftModelControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
+public class AircraftModelControllerTest extends AbstractControllerTest {
 
     @MockitoBean
     private AircraftModelService aircraftModelService;
-
-    @MockitoBean
-    private JwtService jwtService;
-
-    @MockitoBean
-    private UserDetailsService userDetailsService;
 
     private AircraftModelRequest aircraftModelRequest;
     private AircraftModelResponse aircraftModelResponse;
