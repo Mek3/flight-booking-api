@@ -1,43 +1,19 @@
 package com.aerolinea.flight_booking_api.domain.aircraftmodel;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
-import java.util.Optional;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.AuditorAware;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import com.aerolinea.flight_booking_api.config.AbstractIntegrationTest;
-import com.aerolinea.flight_booking_api.config.JpaConfig;
+import com.aerolinea.flight_booking_api.config.BaseJpaTest;
 import com.aerolinea.flight_booking_api.models.AircraftModel;
 import com.aerolinea.flight_booking_api.repositories.AircraftModelRepository;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(JpaConfig.class)
-public class AircraftModelRepositoryTest extends AbstractIntegrationTest {
+public class AircraftModelRepositoryTest extends BaseJpaTest {
 
     @Autowired
     private AircraftModelRepository aircraftModelRepository;
 
-   @Autowired
-    private TestEntityManager entityManagerTest;
-
-    @MockitoBean(name="auditorAware")
-    private AuditorAware<String> auditorAware;
-
-    @BeforeEach
-    void setUp(){
-        when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of("System_test"));
-    }
 
     @Test
     void shouldPersisteAircraftModelAndPopulateCreationAuditFields(){
@@ -47,15 +23,15 @@ public class AircraftModelRepositoryTest extends AbstractIntegrationTest {
                 .maxCapacity((short) 195)
                 .build();
 
-        AircraftModel aircraftModelSaved = entityManagerTest.persistAndFlush(anotherAircraft);
-        entityManagerTest.clear();
+        AircraftModel aircraftModelSaved = entityManager.persistAndFlush(anotherAircraft);
+        entityManager.clear();
 
         assertThat(aircraftModelSaved).isNotNull();
 
         AircraftModel aircraftModel = aircraftModelRepository.findById(aircraftModelSaved.getId()).orElseThrow();
         
         assertThat(aircraftModel.getManufacturer()).isEqualTo("Airbus");
-        assertThat(aircraftModel.getCreatedBy()).isEqualTo("System_test");
+        assertThat(aircraftModel.getCreatedBy()).isEqualTo("test_admin");
         assertThat(aircraftModel.getCreatedAt()).isNotNull();
 
     }
@@ -68,21 +44,21 @@ public class AircraftModelRepositoryTest extends AbstractIntegrationTest {
                 .maxCapacity((short) 195)
                 .build();
 
-        AircraftModel aircraftModelSaved = entityManagerTest.persistAndFlush(anotherAircraft);
-        entityManagerTest.clear();
+        AircraftModel aircraftModelSaved = entityManager.persistAndFlush(anotherAircraft);
+        entityManager.clear();
 
         assertThat(aircraftModelSaved).isNotNull();
 
         AircraftModel aircraftModel = aircraftModelRepository.findById(aircraftModelSaved.getId()).orElseThrow();
         aircraftModel.setManufacturer("Airbus updated");
 
-        entityManagerTest.flush();
-        entityManagerTest.clear();
+        entityManager.flush();
+        entityManager.clear();
 
         AircraftModel aircraftModelResult = aircraftModelRepository.findById(aircraftModelSaved.getId()).orElseThrow();
 
         assertThat(aircraftModelResult.getManufacturer()).isEqualTo("Airbus updated");
-        assertThat(aircraftModelResult.getUpdatedBy()).isEqualTo("System_test");
+        assertThat(aircraftModelResult.getUpdatedBy()).isEqualTo("test_admin");
         assertThat(aircraftModelResult.getUpdatedAt()).isNotNull();
     }
 
@@ -94,18 +70,18 @@ public class AircraftModelRepositoryTest extends AbstractIntegrationTest {
                 .maxCapacity((short) 195)
                 .build();
 
-        AircraftModel aircraftModelSaved = entityManagerTest.persistAndFlush(anotherAircraft);
-        entityManagerTest.clear();
+        AircraftModel aircraftModelSaved = entityManager.persistAndFlush(anotherAircraft);
+        entityManager.clear();
 
         assertThat(aircraftModelSaved).isNotNull();
 
         AircraftModel aircraftModel = aircraftModelRepository.findById(aircraftModelSaved.getId()).orElseThrow();
         aircraftModel.markAsDeleted("system_test");
 
-        entityManagerTest.flush();
-        entityManagerTest.clear();
+        entityManager.flush();
+        entityManager.clear();
 
-        Object[] aircraftModelResult = (Object[]) entityManagerTest.getEntityManager()
+        Object[] aircraftModelResult = (Object[]) entityManager.getEntityManager()
             .createNativeQuery("SELECT deleted_by, deleted_at FROM aircraft_models WHERE id = :id")
             .setParameter("id", aircraftModelSaved.getId())
             .getSingleResult();
@@ -123,8 +99,8 @@ public class AircraftModelRepositoryTest extends AbstractIntegrationTest {
                 .maxCapacity((short) 195)
                 .build();
 
-        AircraftModel aircraftModelSaved = entityManagerTest.persistAndFlush(anotherAircraft);
-        entityManagerTest.clear();
+        AircraftModel aircraftModelSaved = entityManager.persistAndFlush(anotherAircraft);
+        entityManager.clear();
 
         boolean resultTrue = aircraftModelRepository.existsAircraftModelByManufacturerAndModelName(aircraftModelSaved.getManufacturer(), aircraftModelSaved.getModelName());
         assertThat(resultTrue).isTrue();
