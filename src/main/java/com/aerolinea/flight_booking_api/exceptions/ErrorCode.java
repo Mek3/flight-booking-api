@@ -32,6 +32,10 @@ public enum ErrorCode {
     AIRCRAFT_MODEL_IN_USE(5002L, "Aircraft model with ID: %s cannot be deleted because it is assigned to existing flights"),
     AIRCRAFT_MODEL_ALREADY_EXISTS(5003L, "An aircraft model with the specified manufacturer '%s' and model name '%s' already exists"),
 
+    // Aircraft Domain (6000 - 6999)
+    AIRCRAFT_NOT_FOUND(6001L, "Aircraft not found with ID: %s"),
+    AIRCRAFT_ALREADY_EXISTS(6002L, "An aircraft with the registration number '%s' already exists"),
+
     // System & Framework (9000 - 9999)
     VALIDATION_ERROR(9001L, "Validation error: %s"),
     DATABASE_CONFLICT(9002L, "Database conflict detected: The resource may already exist or violates data constraints"),

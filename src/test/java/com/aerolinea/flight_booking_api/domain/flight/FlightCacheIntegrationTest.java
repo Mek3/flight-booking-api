@@ -30,8 +30,7 @@ import com.aerolinea.flight_booking_api.repositories.UserRepository;
 import com.aerolinea.flight_booking_api.services.FlightService;
 import com.aerolinea.flight_booking_api.services.ReservationService;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Transactional
+@SpringBootTest
 public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired

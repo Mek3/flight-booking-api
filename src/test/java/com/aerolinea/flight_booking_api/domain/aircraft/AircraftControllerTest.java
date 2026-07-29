@@ -1,4 +1,4 @@
-package com.aerolinea.flight_booking_api.domain.aircraftmodel;
+package com.aerolinea.flight_booking_api.domain.aircraft;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -27,76 +27,77 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.aerolinea.flight_booking_api.config.AbstractControllerTest;
-import com.aerolinea.flight_booking_api.controllers.AircraftModelController;
-import com.aerolinea.flight_booking_api.dtos.aircraftmodel.AircraftModelRequest;
-import com.aerolinea.flight_booking_api.dtos.aircraftmodel.AircraftModelResponse;
+import com.aerolinea.flight_booking_api.controllers.AircraftController;
+import com.aerolinea.flight_booking_api.dtos.aircraft.AircraftRequest;
+import com.aerolinea.flight_booking_api.dtos.aircraft.AircraftResponse;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
-import com.aerolinea.flight_booking_api.services.AircraftModelService;
+import com.aerolinea.flight_booking_api.services.AircraftService;
 
-@WebMvcTest(AircraftModelController.class)
-public class AircraftModelControllerTest extends AbstractControllerTest {
+@WebMvcTest(AircraftController.class)
+public class AircraftControllerTest extends AbstractControllerTest{
 
     @MockitoBean
-    private AircraftModelService aircraftModelService;
+    private AircraftService aircraftService;
 
-    private AircraftModelRequest aircraftModelRequest;
-    private AircraftModelResponse aircraftModelResponse;
+    private AircraftRequest aircraftRequest;
+    private AircraftResponse aircraftResponse;
     private static String validJsonPayload;
 
     @BeforeAll
     static void setupAll() {
         validJsonPayload = """
                 {
-                    "manufacturer": "Airbus",
-                    "modelName": "A320neo",
-                    "maxCapacity": 195
+                    "registrationNumber": "EC-LOK",
+                    "totalFlightHours": 5000,
+                    "aircraftModelId": 10
                 }
                 """;
     }
 
     @BeforeEach
     void setUp() {
-        aircraftModelRequest = new AircraftModelRequest("Airbus", "A320neo", (short) 195);
-        aircraftModelResponse = new AircraftModelResponse(1L, "Airbus", "A320neo", (short) 195);
+        aircraftRequest = new AircraftRequest("EC-LOK", 5000, 10L);
+        aircraftResponse = new AircraftResponse(1L, "EC-LOK", 5000, 10L);
     }
 
     @Test
     @WithMockUser(roles = "USER")
-    void getAircraftModelById_shouldReturnResponse_whenExists() throws Exception {
+    void getAircraftById_shouldReturnResponse_whenExists() throws Exception {
         Long id = 1L;
-        when(aircraftModelService.getAircraftModelById(id)).thenReturn(aircraftModelResponse);
+        when(aircraftService.getAircraftById(id)).thenReturn(aircraftResponse);
 
-        mockMvc.perform(get("/api/v1/aircraft-models/" + id)
+        mockMvc.perform(get("/api/v1/aircraft/" + id)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.manufacturer").value("Airbus"))
-                .andExpect(jsonPath("$.modelName").value("A320neo"));
+                .andExpect(jsonPath("$.registrationNumber").value("EC-LOK"))
+                .andExpect(jsonPath("$.totalFlightHours").value(5000))
+                .andExpect(jsonPath("$.aircraftModelId").value(10));
     }
 
     @Test
     @WithMockUser(roles = "USER")
-    void getAircraftModelById_shouldReturn404_whenNotFound() throws Exception {
+    void getAircraftById_shouldReturn404_whenNotFound() throws Exception {
         Long id = 9999L;
-        when(aircraftModelService.getAircraftModelById(id)).thenThrow(
-                new ResourceNotFoundException(ErrorCode.AIRCRAFT_MODEL_NOT_FOUND,
-                        String.format(ErrorCode.AIRCRAFT_MODEL_NOT_FOUND.getMessage(), id)));
+        when(aircraftService.getAircraftById(id)).thenThrow(
+                new ResourceNotFoundException(ErrorCode.AIRCRAFT_NOT_FOUND,
+                        String.format(ErrorCode.AIRCRAFT_NOT_FOUND.getMessage(), id)));
 
-        mockMvc.perform(get("/api/v1/aircraft-models/" + id))
+        mockMvc.perform(get("/api/v1/aircraft/" + id))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value(String.format(ErrorCode.AIRCRAFT_MODEL_NOT_FOUND.getMessage(), id)));
+                .andExpect(jsonPath("$.message").value(String.format(ErrorCode.AIRCRAFT_NOT_FOUND.getMessage(), id)));
     }
 
     @Test
     @WithMockUser(roles = "USER")
-    void getAllAircraftModels_shouldReturnPage_whenNotEmpty() throws Exception {
-        Page<AircraftModelResponse> page = new PageImpl<>(List.of(aircraftModelResponse));
+    void getAllAircraft_shouldReturnPage_whenNotEmpty() throws Exception {
+        Page<AircraftResponse> page = new PageImpl<>(List.of(aircraftResponse));
 
-        when(aircraftModelService.getAllAircraftModels(any(Pageable.class))).thenReturn(page);
+        when(aircraftService.getAllAircraft(any(Pageable.class))).thenReturn(page);
 
-        mockMvc.perform(get("/api/v1/aircraft-models")
+        mockMvc.perform(get("/api/v1/aircraft")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
@@ -104,8 +105,8 @@ public class AircraftModelControllerTest extends AbstractControllerTest {
 
     @Test
     @WithMockUser(roles = "USER")
-    void createAircraftModel_shouldReturn403_WhenUserLacksAdminRole() throws Exception {
-        mockMvc.perform(post("/api/v1/aircraft-models")
+    void createAircraft_shouldReturn403_WhenUserLacksAdminRole() throws Exception {
+        mockMvc.perform(post("/api/v1/aircraft")
                         .content(validJsonPayload)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden())
@@ -114,21 +115,21 @@ public class AircraftModelControllerTest extends AbstractControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void createAircraftModel_shouldReturnResponse_WhenSuccessful() throws Exception {
-        when(aircraftModelService.createAircraftModel(aircraftModelRequest)).thenReturn(aircraftModelResponse);
+    void createAircraft_shouldReturnResponse_WhenSuccessful() throws Exception {
+        when(aircraftService.createAircraft(aircraftRequest)).thenReturn(aircraftResponse);
 
-        mockMvc.perform(post("/api/v1/aircraft-models")
+        mockMvc.perform(post("/api/v1/aircraft")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validJsonPayload))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.manufacturer").value("Airbus"));
+                .andExpect(jsonPath("$.registrationNumber").value("EC-LOK"));
     }
 
     @Test
-    void createAircraftModel_shouldReturn401_WhenUserIsUnauthorized() throws Exception {
-        mockMvc.perform(post("/api/v1/aircraft-models")
+    void createAircraft_shouldReturn401_WhenUserIsUnauthorized() throws Exception {
+        mockMvc.perform(post("/api/v1/aircraft")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validJsonPayload))
                 .andExpect(status().isUnauthorized())
@@ -139,59 +140,59 @@ public class AircraftModelControllerTest extends AbstractControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void updateAircraftModel_shouldReturnResponse_WhenSuccessful() throws Exception {
+    void updateAircraft_shouldReturnResponse_WhenSuccessful() throws Exception {
         Long id = 1L;
-        when(aircraftModelService.updateAircraftModel(id, aircraftModelRequest)).thenReturn(aircraftModelResponse);
+        when(aircraftService.updateAircraft(id, aircraftRequest)).thenReturn(aircraftResponse);
 
-        mockMvc.perform(put("/api/v1/aircraft-models/" + id)
+        mockMvc.perform(put("/api/v1/aircraft/" + id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validJsonPayload))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.modelName").value("A320neo"));
+                .andExpect(jsonPath("$.registrationNumber").value("EC-LOK"));
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void updateAircraftModel_shouldReturn404_whenNotFound() throws Exception {
+    void updateAircraft_shouldReturn404_whenNotFound() throws Exception {
         Long id = 9999L;
-        when(aircraftModelService.updateAircraftModel(id, aircraftModelRequest)).thenThrow(
-                new ResourceNotFoundException(ErrorCode.AIRCRAFT_MODEL_NOT_FOUND,
-                        String.format(ErrorCode.AIRCRAFT_MODEL_NOT_FOUND.getMessage(), id)));
+        when(aircraftService.updateAircraft(id, aircraftRequest)).thenThrow(
+                new ResourceNotFoundException(ErrorCode.AIRCRAFT_NOT_FOUND,
+                        String.format(ErrorCode.AIRCRAFT_NOT_FOUND.getMessage(), id)));
 
-        mockMvc.perform(put("/api/v1/aircraft-models/" + id)
+        mockMvc.perform(put("/api/v1/aircraft/" + id)
                         .content(validJsonPayload)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value(String.format(ErrorCode.AIRCRAFT_MODEL_NOT_FOUND.getMessage(), id)));
+                .andExpect(jsonPath("$.message").value(String.format(ErrorCode.AIRCRAFT_NOT_FOUND.getMessage(), id)));
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void deleteAircraftModel_shouldReturn204_WhenSuccessful() throws Exception {
+    void deleteAircraft_shouldReturn204_WhenSuccessful() throws Exception {
         Long id = 1L;
-        doNothing().when(aircraftModelService).deleteAircraftModel(id);
+        doNothing().when(aircraftService).deleteAircraft(id);
 
-        mockMvc.perform(delete("/api/v1/aircraft-models/" + id))
+        mockMvc.perform(delete("/api/v1/aircraft/" + id))
                 .andExpect(status().isNoContent());
 
-        verify(aircraftModelService).deleteAircraftModel(id);
+        verify(aircraftService).deleteAircraft(id);
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void deleteAircraftModel_shouldReturn404_whenNotFound() throws Exception {
+    void deleteAircraft_shouldReturn404_whenNotFound() throws Exception {
         Long id = 9999L;
-        doThrow(new ResourceNotFoundException(ErrorCode.AIRCRAFT_MODEL_NOT_FOUND,
-                String.format(ErrorCode.AIRCRAFT_MODEL_NOT_FOUND.getMessage(), id)))
-                .when(aircraftModelService).deleteAircraftModel(id);
+        doThrow(new ResourceNotFoundException(ErrorCode.AIRCRAFT_NOT_FOUND,
+                String.format(ErrorCode.AIRCRAFT_NOT_FOUND.getMessage(), id)))
+                .when(aircraftService).deleteAircraft(id);
 
-        mockMvc.perform(delete("/api/v1/aircraft-models/" + id)
+        mockMvc.perform(delete("/api/v1/aircraft/" + id)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value(String.format(ErrorCode.AIRCRAFT_MODEL_NOT_FOUND.getMessage(), id)));
+                .andExpect(jsonPath("$.message").value(String.format(ErrorCode.AIRCRAFT_NOT_FOUND.getMessage(), id)));
 
-        verify(aircraftModelService).deleteAircraftModel(id);
+        verify(aircraftService).deleteAircraft(id);
     }
 }

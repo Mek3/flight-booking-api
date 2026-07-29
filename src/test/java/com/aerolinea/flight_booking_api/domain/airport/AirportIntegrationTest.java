@@ -1,76 +1,17 @@
 package com.aerolinea.flight_booking_api.domain.airport;
 
-import static org.mockito.Mockito.when;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.security.core.Authentication;
 
-import com.aerolinea.flight_booking_api.config.AbstractIntegrationTest;
+import com.aerolinea.flight_booking_api.config.AbstractWebIntegrationTest;
 import com.aerolinea.flight_booking_api.dtos.airport.AirportRequest;
-import com.aerolinea.flight_booking_api.models.Role;
-import com.aerolinea.flight_booking_api.models.User;
-import com.aerolinea.flight_booking_api.services.JwtService;
-
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureWebTestClient
-public class AirportIntegrationTest extends AbstractIntegrationTest{
 
 
-    @Autowired
-    private JwtService jwtService;
+public class AirportIntegrationTest extends AbstractWebIntegrationTest {
 
-    @MockitoBean
-    private UserDetailsService userDetailsServiceMock;
-
-    @MockitoBean
-    private UserDetails mockUserDetails;
-
-    @Autowired
-    private WebTestClient webTestClient;
-
-    private String adminJwtToken;
-
-    @BeforeEach
-    void setUp() {
-        String username = "system_admin";
-        User adminUser = User.builder()
-                .name("System")
-                .surname("Admin")
-                .email("admin@flightapi.com")
-                .username(username)
-                .password("dummy_password") 
-                .phone("555-0199")
-                .build();
-
-        Role adminRole = Role.builder()
-                .name("ROLE_ADMIN")
-                .description("System Administrator")
-                .build();
-        
-        adminUser.addRole(adminRole);
-
-        Authentication adminAuth = new UsernamePasswordAuthenticationToken(
-                adminUser,
-                null,
-                adminUser.getAuthorities() 
-        );
-
-
-       this.adminJwtToken = jwtService.generateToken(adminAuth);
-
-       when(userDetailsServiceMock.loadUserByUsername(username)).thenReturn(adminUser);
-    }
 
     @Test
     void createAirport_ShouldReturn201_WhenPayloadIsValidAndUserIsAdmin() {
