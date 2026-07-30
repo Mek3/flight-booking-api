@@ -36,6 +36,11 @@ public enum ErrorCode {
     AIRCRAFT_NOT_FOUND(6001L, "Aircraft not found with ID: %s"),
     AIRCRAFT_ALREADY_EXISTS(6002L, "An aircraft with the registration number '%s' already exists"),
 
+    // Route Domain (7000 - 7999)
+    ROUTE_NOT_FOUND(7001L, "Route not found with ID: %s"),
+    ROUTE_ALREADY_EXISTS(7002L, "A route between origin airport ID %s and destination airport ID %s already exists"),
+    ROUTE_SAME_ORIGIN_DESTINATION(7003L, "Origin airport and destination airport cannot be the same (Airport ID: %s)"),
+
     // System & Framework (9000 - 9999)
     VALIDATION_ERROR(9001L, "Validation error: %s"),
     DATABASE_CONFLICT(9002L, "Database conflict detected: The resource may already exist or violates data constraints"),
