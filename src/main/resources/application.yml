@@ -1,0 +1,11 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: flight-booking-api
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate

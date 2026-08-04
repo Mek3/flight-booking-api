@@ -35,6 +35,7 @@ A RESTful API for managing flight reservations, built with Spring Boot. This pro
 * ✅ **Security & Integration Testing:** Implemented comprehensive `MockMvc` integration tests to strictly validate the RBAC layer, JWT authentication filters, IDOR protections, and the unified `ApiError` responses across both Servlet and MVC boundaries.
 * ✅ **Concurrency Stress Testing:** Engineered multi-threaded stress tests utilizing `ExecutorService` and `CountDownLatch` to mathematically prove zero seat overbooking during simultaneous purchase attempts, validating the JPA Optimistic Locking (`@Version`) mechanism under heavy load.
 * ✅ **Continuous Integration (CI):** Configured a GitHub Actions workflow to automatically provision an ephemeral environment, compile the application, and execute the entire Testcontainers suite on every Pull Request, establishing a strict quality gate against regressions.
+* ✅ **Infrastructure & Secret Management:** Eradicated hardcoded secrets and monolithic property files. Migrated to an industry-standard, multi-profile YAML configuration (`application.yml`, `application-local.yml`, `application-prod.yml`). Secured the codebase by strictly injecting database credentials and JWT signatures via environment variables, fortified by comprehensive `.gitignore` rules to prevent credential leaks.
 * ✅ **Dynamic Search Engine:** Migrated rigid repository methods to Spring Data JPA Specifications (Criteria API), enabling flexible, multi-parameter flight filtering (dates, price ranges, destinations) seamlessly integrated with pagination.
 * ✅ **High-Performance Caching:** Integrated Redis to serve read-heavy flight search queries directly from RAM. Engineered a robust cache invalidation strategy (`@CacheEvict`) tied to reservation events (create, cancel, confirm, expire) to guarantee zero stale data regarding seat availability.
 * ✅ **Secure Polymorphic Deserialization:** Hardened the Jackson `ObjectMapper` with a strict `BasicPolymorphicTypeValidator` to safely serialize objects to Redis without exposing the application to Remote Code Execution (RCE) vulnerabilities. Engineered a custom `RestPageImpl` wrapper to natively deserialize Spring Data's `PageImpl` interfaces from JSON.
@@ -43,10 +44,15 @@ A RESTful API for managing flight reservations, built with Spring Boot. This pro
 
 ## ⚙️ How to run locally
 1. Clone the repository.
-2. **To run the application (for manual testing via Postman/Swagger):** Ensure **MySQL** and **Redis** are running locally, and update `application.properties` with your credentials.
-3. Run the application via your IDE or using Maven. 
-   * *Note: Database schema creation and initial test data injection (Users, Roles, Flights) are automatically handled upon startup via **Flyway migrations**, replacing manual data seeders.*
-4. **To run the automated tests:** Simply execute `mvn test` (Testcontainers will automatically spin up ephemeral MySQL and Redis containers with zero configuration).
+2. **Infrastructure:** Ensure **MySQL** and **Redis** are running locally.
+3. **Environment Setup:**
+   * The project strictly enforces environment separation. By default, it expects the `local` profile.
+   * Inject your local secrets via IDE Environment Variables or your terminal: `DB_LOCAL_USER`, `DB_LOCAL_PASSWORD`, and `JWT_SECRET_LOCAL`. *(Note: Default fallbacks for DB credentials are set to 'root' for seamless onboarding, but the JWT secret must be provided).*
+4. **To run the application (for manual testing via Postman/Swagger):**
+   * Run the application via your IDE (ensure `Active profiles: local` is set) or using Maven: `mvn spring-boot:run -Dspring-boot.run.profiles=local`.
+   * *Note: Database schema creation and initial test data injection (Users, Roles) are automatically handled upon startup via **Flyway migrations**.*
+5. **To run the automated tests:**
+   * Execute `mvn test`. Testcontainers will automatically intercept the execution, spin up ephemeral MySQL and Redis containers, run the suite, and tear them down with zero manual configuration required.
 
 ## 🔐 Authentication & Authorization (Testing via Postman)
 The API strictly enforces role-based access. 

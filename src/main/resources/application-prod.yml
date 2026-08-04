@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${DB_PROD_URL}
+    username: ${DB_PROD_USER}
+    password: ${DB_PROD_PASSWORD}
+  jpa:
+    show-sql: false
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET_PROD}
+  scheduling:
+    reservation-cleanup-delay: 120000
