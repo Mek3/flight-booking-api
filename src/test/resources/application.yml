@@ -1,0 +1,12 @@
+spring:
+  flyway:
+    clean-disabled: false
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+app:
+  jwt:
+    secret: VGVzdFNlY3JldEtleUZvckpXVFRva2Vuc1Byb3ZpZGVkQnlTcHJpbmdCb290QVBJ
+  scheduling:
+    reservation-cleanup-delay: 60000

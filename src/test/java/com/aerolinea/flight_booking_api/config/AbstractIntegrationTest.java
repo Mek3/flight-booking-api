@@ -30,12 +30,8 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.datasource.username", mySQLContainer::getUsername);
         registry.add("spring.datasource.password", mySQLContainer::getPassword);
 
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
-        
         registry.add("spring.data.redis.host", redisContainer::getHost);
         registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
-
-        registry.add("spring.flyway.clean-disabled", () -> "false");
     }
 
     @BeforeEach

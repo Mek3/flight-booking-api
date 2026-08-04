@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/airline_db?createDatabaseIfNotExist=true&serverTimezone=UTC
+    username: ${DB_LOCAL_USER:root}
+    password: ${DB_LOCAL_PASSWORD:root}
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET_LOCAL}
+  scheduling:
+    reservation-cleanup-delay: 60000
