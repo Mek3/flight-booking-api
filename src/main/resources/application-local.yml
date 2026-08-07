@@ -14,3 +14,7 @@ app:
     secret: ${JWT_SECRET_LOCAL}
   scheduling:
     reservation-cleanup-delay: 60000
+    flight-generation:
+      cron: "0 0 2 * * *"
+      lock-at-least-for: "5m"
+      lock-at-most-for: "15m"
