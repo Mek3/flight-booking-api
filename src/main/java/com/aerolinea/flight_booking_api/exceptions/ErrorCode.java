@@ -41,6 +41,23 @@ public enum ErrorCode {
     ROUTE_ALREADY_EXISTS(7002L, "A route between origin airport ID %s and destination airport ID %s already exists"),
     ROUTE_SAME_ORIGIN_DESTINATION(7003L, "Origin airport and destination airport cannot be the same (Airport ID: %s)"),
 
+    // Flight Schedule Domain (8000 - 8099)
+    FLIGHT_SCHEDULE_NOT_FOUND(8001L, "Flight schedule not found with ID: %s"),
+    FLIGHT_SCHEDULE_ALREADY_EXISTS(8002L, "A flight schedule with flight number '%s' already exists"),
+
+    // Flight Instance Domain (8100 - 8199)
+    FLIGHT_INSTANCE_NOT_FOUND(8101L, "Flight instance not found with ID: %s"),
+    FLIGHT_INSTANCE_ALREADY_EXISTS(8102L, "Flight instance already exists for schedule ID %s on date %s"),
+
+    // Aircraft Layout Domain (8200 - 8299)
+    AIRCRAFT_LAYOUT_NOT_FOUND(8201L, "Aircraft layout not found with ID: %s"),
+    AIRCRAFT_LAYOUT_INVALID_GEOMETRY(8202L, "Invalid seat geometry for layout ID %s: total_rows and seat_letters must be defined correctly"),
+
+    // Seat Domain (8300 - 8399)
+    SEAT_NOT_FOUND(8301L, "Seat not found with ID: %s"),
+    SEAT_BULK_GENERATION_FAILED(8302L, "Failed to materialize bulk seats for flight instance ID: %s"),
+    SEAT_ALREADY_BOOKED(8303L, "Seat %s is already booked for flight instance ID: %s"),
+
     // System & Framework (9000 - 9999)
     VALIDATION_ERROR(9001L, "Validation error: %s"),
     DATABASE_CONFLICT(9002L, "Database conflict detected: The resource may already exist or violates data constraints"),
