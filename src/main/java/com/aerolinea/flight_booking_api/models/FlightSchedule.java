@@ -53,6 +53,10 @@ public class FlightSchedule extends BaseEntity {
     @JoinColumn(name = "arrival_airport_id", nullable = false)
     private Airport arrivalAirport;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "aircraft_layout_id", nullable = false)
+    private AircraftLayout aircraftLayout;
+
     @Column(name = "departure_time", nullable = false)
     private LocalTime departureTime;
 
