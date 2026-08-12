@@ -42,10 +42,19 @@ public class AircraftLayout extends BaseEntity {
     @Column(name = "seat_capacity", nullable = false)
     private Integer seatCapacity;
 
+    @Column(name = "total_rows", nullable = false)
+    private Integer totalRows;
+
+    @Column(name = "seat_letters", nullable = false, length = 10)
+    private String seatLetters;
+
     @Builder
-    public AircraftLayout(AircraftModel aircraftModel, String cabinClass, Integer seatCapacity) {
+    public AircraftLayout(AircraftModel aircraftModel, String cabinClass, Integer seatCapacity, Integer totalRows, String seatLetters) {
         this.aircraftModel = aircraftModel;
         this.cabinClass = cabinClass;
         this.seatCapacity = seatCapacity;
+        this.totalRows = totalRows;
+        this.seatLetters = seatLetters;
+
     }
 }

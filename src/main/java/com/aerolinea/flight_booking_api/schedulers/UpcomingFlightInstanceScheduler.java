@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class UpcomingFlightsScheduler {
+public class UpcomingFlightInstanceScheduler {
 
     private final FlightInstanceGenerationService generationService;
 

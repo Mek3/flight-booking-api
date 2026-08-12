@@ -1,10 +1,14 @@
 package com.aerolinea.flight_booking_api.domain.flightSchedule;
 
+import com.aerolinea.flight_booking_api.models.AircraftLayout;
+import com.aerolinea.flight_booking_api.models.AircraftModel;
 import com.aerolinea.flight_booking_api.models.Airport;
 import com.aerolinea.flight_booking_api.models.FlightSchedule;
 import com.aerolinea.flight_booking_api.repositories.FlightScheduleRepository;
 import com.aerolinea.flight_booking_api.services.FlightInstanceGenerationServiceImpl;
 import com.aerolinea.flight_booking_api.services.FlightInstanceService;
+import com.aerolinea.flight_booking_api.utils.factories.AircraftLayoutFactory;
+import com.aerolinea.flight_booking_api.utils.factories.AircraftModelFactory;
 import com.aerolinea.flight_booking_api.utils.factories.AirportFactory;
 import com.aerolinea.flight_booking_api.utils.factories.FlightScheduleFactory;
 import org.junit.jupiter.api.Test;
@@ -41,14 +45,16 @@ class FlightInstanceGenerationServiceImplTest {
     void generateUpcomingFlightInstances_shouldProcessAllSchedulesAndSurviveExceptions() {
         Airport departure = AirportFactory.validAirportBuilder("MAD").build();
         Airport arrival = AirportFactory.validAirportBuilder("JFK").build();
+        AircraftModel aircrafmodel = AircraftModelFactory.validModelBuilder().build();
+        AircraftLayout aircraftLayout = AircraftLayoutFactory.validLayoutBuilder(aircrafmodel).build();
 
-        FlightSchedule successfulSchedule1 = FlightScheduleFactory.validScheduleBuilder(departure, arrival)
+        FlightSchedule successfulSchedule1 = FlightScheduleFactory.validScheduleBuilder(departure, arrival, aircraftLayout)
                 .flightNumber("IBE001").build();
 
-        FlightSchedule duplicateSchedule = FlightScheduleFactory.validScheduleBuilder(departure, arrival)
+        FlightSchedule duplicateSchedule = FlightScheduleFactory.validScheduleBuilder(departure, arrival, aircraftLayout)
                 .flightNumber("IBE002").build();
 
-        FlightSchedule successfulSchedule2 = FlightScheduleFactory.validScheduleBuilder(departure, arrival)
+        FlightSchedule successfulSchedule2 = FlightScheduleFactory.validScheduleBuilder(departure, arrival, aircraftLayout)
                 .flightNumber("IBE003").build();
 
         PageRequest pageable = PageRequest.of(0, 500);

@@ -14,3 +14,7 @@ app:
       cron: "0 0 2 * * *"
       lock-at-least-for: "5m"
       lock-at-most-for: "15m"
+    seat-generation:
+      cron: "0 0 4 * * *"
+      lock-at-least-for: "5m"
+      lock-at-most-for: "15m"
