@@ -49,9 +49,12 @@ public class AircraftLayout extends BaseEntity {
     private String seatLetters;
 
     @Builder
-    public AircraftLayout(AircraftModel aircraftModel, String cabinClass, Integer seatCapacity) {
+    public AircraftLayout(AircraftModel aircraftModel, String cabinClass, Integer seatCapacity, Integer totalRows, String seatLetters) {
         this.aircraftModel = aircraftModel;
         this.cabinClass = cabinClass;
         this.seatCapacity = seatCapacity;
+        this.totalRows = totalRows;
+        this.seatLetters = seatLetters;
+
     }
 }

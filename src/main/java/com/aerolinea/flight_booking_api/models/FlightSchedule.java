@@ -68,12 +68,14 @@ public class FlightSchedule extends BaseEntity {
 
     @Builder
     public FlightSchedule(String flightNumber, Airport departureAirport, Airport arrivalAirport,
-                          LocalTime departureTime, LocalTime arrivalTime, Integer daysOfWeekMask) {
+                          LocalTime departureTime, LocalTime arrivalTime, Integer daysOfWeekMask, AircraftLayout aircraftLayout) {
         this.flightNumber = flightNumber;
         this.departureAirport = departureAirport;
         this.arrivalAirport = arrivalAirport;
         this.departureTime = departureTime;
         this.arrivalTime = arrivalTime;
         this.daysOfWeekMask = daysOfWeekMask;
+        this.aircraftLayout = aircraftLayout;
+
     }
 }
