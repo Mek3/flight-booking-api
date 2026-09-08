@@ -12,6 +12,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -56,7 +57,7 @@ public class User  extends BaseEntity implements UserDetails {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserRoleAssignment> roles = new ArrayList<UserRoleAssignment>();
 
     @Builder
@@ -73,18 +74,18 @@ public class User  extends BaseEntity implements UserDetails {
         if (this.roles == null) {
             this.roles = new ArrayList<>();
         }
-        
+
         UserRoleAssignment assignment = UserRoleAssignment.builder()
                 .user(this)
                 .role(role)
                 .build();
-                
+
         this.roles.add(assignment);
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if(roles == null) 
+        if(roles == null)
             return Collections.emptyList();
 
         return roles.stream().map(assignment -> new SimpleGrantedAuthority(assignment.getRole().getName())).toList();
@@ -92,21 +93,21 @@ public class User  extends BaseEntity implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return true; 
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true; 
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true; 
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return this.isActive; 
+        return this.isActive;
     }
 }
