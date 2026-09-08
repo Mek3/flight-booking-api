@@ -12,7 +12,7 @@ CREATE TABLE `itineraries` (
                                PRIMARY KEY (`id`),
                                UNIQUE KEY `uk_itinerary_reservation_sequence_active` (`reservation_id`,`sequence_order`,`active_flag`),
                                CONSTRAINT `fk_itineraries_reservation` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ;
 
 CREATE TABLE `flight_segments` (
                                    `id` bigint NOT NULL AUTO_INCREMENT,
@@ -31,4 +31,4 @@ CREATE TABLE `flight_segments` (
                                    KEY `idx_flight_segments_flight_instance` (`flight_instance_id`),
                                    CONSTRAINT `fk_flight_segments_itinerary` FOREIGN KEY (`itinerary_id`) REFERENCES `itineraries` (`id`),
                                    CONSTRAINT `fk_flight_segments_flight_instance` FOREIGN KEY (`flight_instance_id`) REFERENCES `flight_instances` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ;
