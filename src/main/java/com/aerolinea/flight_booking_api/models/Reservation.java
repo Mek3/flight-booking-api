@@ -1,6 +1,8 @@
 package com.aerolinea.flight_booking_api.models;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -9,6 +11,7 @@ import org.hibernate.annotations.SQLRestriction;
 import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationException;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -19,6 +22,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
 @Entity
@@ -35,7 +40,7 @@ public class Reservation extends BaseEntity {
     @Setter(AccessLevel.NONE)
     private Long id;
 
-    @Column(name = "reservation_code", nullable = false, unique = true) 
+    @Column(name = "reservation_code", nullable = false, unique = true)
     private String reservationCode;
 
     @Enumerated(EnumType.STRING)
@@ -44,21 +49,24 @@ public class Reservation extends BaseEntity {
 
     @Column(name = "number_of_passengers", nullable = false)
     private Integer numberOfPassengers;
-    
-    @Column(name="total_price", precision = 10, scale = 2, nullable = false)
+
+    @Column(name = "total_price", precision = 10, scale = 2, nullable = false)
     private BigDecimal totalPrice;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "flight_instance_id", nullable = false)
     private FlightInstance flightInstance;
 
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("sequenceOrder ASC")
+    private List<Itinerary> itineraries = new ArrayList<>();
 
     @Builder
-    public Reservation(String reservationCode, ReservationStatus status, Integer numberOfPassengers, 
+    public Reservation(String reservationCode, ReservationStatus status, Integer numberOfPassengers,
                        BigDecimal totalPrice, User user, FlightInstance flightInstance) {
         this.reservationCode = reservationCode;
         this.status = status;
@@ -66,6 +74,21 @@ public class Reservation extends BaseEntity {
         this.totalPrice = totalPrice;
         this.user = user;
         this.flightInstance = flightInstance;
+    }
+
+    public void addItinerary(Itinerary itinerary) {
+        itinerary.setReservation(this);
+        itinerary.setSequenceOrder(this.itineraries.size() + 1);
+        this.itineraries.add(itinerary);
+    }
+
+    public void removeItinerary(Itinerary itinerary) {
+        this.itineraries.remove(itinerary);
+        itinerary.setReservation(null);
+    }
+
+    public boolean isRoundTrip() {
+        return this.itineraries.size() > 1;
     }
 
     public void confirmReservation() {
@@ -91,6 +114,4 @@ public class Reservation extends BaseEntity {
         }
         this.status = ReservationStatus.EXPIRED;
     }
-
-
 }
