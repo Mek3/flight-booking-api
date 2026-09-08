@@ -1,5 +1,8 @@
 package com.aerolinea.flight_booking_api.models;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import org.hibernate.annotations.SQLDelete;
@@ -66,16 +69,32 @@ public class FlightSchedule extends BaseEntity {
     @Column(name = "days_of_week_mask", nullable = false)
     private Integer daysOfWeekMask;
 
+    @Column(name = "arrival_day_offset", nullable = false)
+    private Integer arrivalDayOffset;
+
+    @Column(name = "base_price", precision = 10, scale = 2, nullable = false)
+    private BigDecimal basePrice;
+
     @Builder
     public FlightSchedule(String flightNumber, Airport departureAirport, Airport arrivalAirport,
-                          LocalTime departureTime, LocalTime arrivalTime, Integer daysOfWeekMask, AircraftLayout aircraftLayout) {
+                          LocalTime departureTime, LocalTime arrivalTime, Integer arrivalDayOffset,
+                          Integer daysOfWeekMask, AircraftLayout aircraftLayout, BigDecimal basePrice) {
         this.flightNumber = flightNumber;
         this.departureAirport = departureAirport;
         this.arrivalAirport = arrivalAirport;
         this.departureTime = departureTime;
         this.arrivalTime = arrivalTime;
+        this.arrivalDayOffset = arrivalDayOffset == null ? 0 : arrivalDayOffset;
         this.daysOfWeekMask = daysOfWeekMask;
         this.aircraftLayout = aircraftLayout;
+        this.basePrice = basePrice;
+    }
 
+    public LocalDateTime resolveDepartureAt(LocalDate departureDate) {
+        return LocalDateTime.of(departureDate, this.departureTime);
+    }
+
+    public LocalDateTime resolveArrivalAt(LocalDate departureDate) {
+        return LocalDateTime.of(departureDate.plusDays(this.arrivalDayOffset), this.arrivalTime);
     }
 }

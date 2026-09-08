@@ -1,6 +1,7 @@
 package com.aerolinea.flight_booking_api.models;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import com.aerolinea.flight_booking_api.models.enums.FlightStatus;
 import jakarta.persistence.*;
@@ -56,5 +57,14 @@ public class FlightInstance extends BaseEntity {
         this.aircraft = aircraft;
         this.departureDate = departureDate;
         this.status = status;
+    }
+
+
+    public LocalDateTime getDepartureAt() {
+        return flightSchedule.resolveDepartureAt(this.departureDate);
+    }
+
+    public LocalDateTime getArrivalAt() {
+        return flightSchedule.resolveArrivalAt(this.departureDate);
     }
 }
