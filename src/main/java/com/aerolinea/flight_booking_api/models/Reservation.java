@@ -53,19 +53,19 @@ public class Reservation extends BaseEntity {
     private User user;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "flight_id", nullable = false)
-    private Flight flight;
+    @JoinColumn(name = "flight_instance_id", nullable = false)
+    private FlightInstance flightInstance;
 
 
     @Builder
     public Reservation(String reservationCode, ReservationStatus status, Integer numberOfPassengers, 
-                       BigDecimal totalPrice, User user, Flight flight) {
+                       BigDecimal totalPrice, User user, FlightInstance flightInstance) {
         this.reservationCode = reservationCode;
         this.status = status;
         this.numberOfPassengers = numberOfPassengers;
         this.totalPrice = totalPrice;
         this.user = user;
-        this.flight = flight;
+        this.flightInstance = flightInstance;
     }
 
     public void confirmReservation() {

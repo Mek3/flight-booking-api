@@ -3,11 +3,13 @@ package com.aerolinea.flight_booking_api.domain.reservation;
 import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationException;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
-import com.aerolinea.flight_booking_api.models.Flight;
-import com.aerolinea.flight_booking_api.models.Reservation;
-import com.aerolinea.flight_booking_api.models.ReservationStatus;
-import com.aerolinea.flight_booking_api.models.User;
+import com.aerolinea.flight_booking_api.models.*;
+import com.aerolinea.flight_booking_api.models.enums.FlightStatus;
+import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
+import com.aerolinea.flight_booking_api.repositories.FlightInstanceRepository;
 import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
+import com.aerolinea.flight_booking_api.repositories.SeatRepository;
+import com.aerolinea.flight_booking_api.repositories.UserRepository;
 import com.aerolinea.flight_booking_api.services.ReservationServiceImpl;
 
 import org.junit.jupiter.api.AfterEach;
@@ -41,6 +43,18 @@ class ReservationServiceImplTest {
     private ReservationRepository reservationRepository;
 
     @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private FlightInstanceRepository flightInstanceRepository;
+
+    @Mock
+    private SeatRepository seatRepository;
+
+    @Mock
+    private ReservationMapper reservationMapper;
+
+    @Mock
     private SecurityContext securityContext;
 
     @Mock
@@ -50,7 +64,8 @@ class ReservationServiceImplTest {
     private ReservationServiceImpl reservationService;
 
     private User testUser;
-    private Flight testFlight;
+    private FlightSchedule testSchedule;
+    private FlightInstance testFlightInstance;
     private Reservation testReservation;
 
     @BeforeEach
@@ -62,15 +77,26 @@ class ReservationServiceImplTest {
 
         ReflectionTestUtils.setField(testUser, "id", 1L);
 
-        testFlight = Flight.builder()
+        LocalDateTime departure = LocalDateTime.now().plusDays(5);
+
+        testSchedule = FlightSchedule.builder()
                 .flightNumber("IBE-001")
-                .departure("MAD")
-                .departureTime(LocalDateTime.now().plusDays(5))
-                .destination("JFK")
-                .destinationTime(LocalDateTime.now().plusDays(5))
-                .availableSeats(100)
-                .price(new BigDecimal("400.00"))
+                .departureTime(departure.toLocalTime())
+                .arrivalTime(departure.plusHours(8).toLocalTime())
+                .arrivalDayOffset(0)
+                .daysOfWeekMask(127)
+                .basePrice(new BigDecimal("400.00"))
                 .build();
+
+        ReflectionTestUtils.setField(testSchedule, "id", 10L);
+
+        testFlightInstance = FlightInstance.builder()
+                .flightSchedule(testSchedule)
+                .departureDate(departure.toLocalDate())
+                .status(FlightStatus.SCHEDULED)
+                .build();
+
+        ReflectionTestUtils.setField(testFlightInstance, "id", 50L);
 
         testReservation = Reservation.builder()
                 .reservationCode("RES-12345")
@@ -78,9 +104,8 @@ class ReservationServiceImplTest {
                 .numberOfPassengers(2)
                 .totalPrice(new BigDecimal("800.00"))
                 .user(testUser)
-                .flight(testFlight)
+                .flightInstance(testFlightInstance)
                 .build();
-
     }
 
     @AfterEach
@@ -92,7 +117,7 @@ class ReservationServiceImplTest {
         SecurityContextHolder.setContext(securityContext);
         lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
         lenient().when(authentication.getName()).thenReturn(username);
-        
+
         GrantedAuthority authority = new SimpleGrantedAuthority(role);
         lenient().doReturn(List.of(authority)).when(authentication).getAuthorities();
     }
@@ -125,20 +150,18 @@ class ReservationServiceImplTest {
     @DisplayName("Owner should be able to cancel reservation with more than 24h notice")
     void ownerShouldCancelReservationSuccessfully() {
         mockSecurityContext("pacog", "ROLE_USER");
-        when(reservationRepository.findById(100L)).thenReturn(Optional.of(testReservation));
-        int initialSeats = testFlight.getAvailableSeats();
+        when(reservationRepository.findByIdWithFlightInstance(100L)).thenReturn(Optional.of(testReservation));
 
         reservationService.cancelReservation(100L);
 
         assertEquals(ReservationStatus.CANCELLED, testReservation.getStatus());
-        assertEquals(initialSeats + 2, testFlight.getAvailableSeats()); 
     }
 
     @Test
     @DisplayName("Admin should be able to cancel another user's reservation")
     void adminShouldCancelAnyReservationSuccessfully() {
         mockSecurityContext("admin_system", "ROLE_ADMIN");
-        when(reservationRepository.findById(100L)).thenReturn(Optional.of(testReservation));
+        when(reservationRepository.findByIdWithFlightInstance(100L)).thenReturn(Optional.of(testReservation));
 
         reservationService.cancelReservation(100L);
 
@@ -150,10 +173,10 @@ class ReservationServiceImplTest {
     void shouldThrowExceptionWhenCancellingSomeoneElseReservation() {
         mockSecurityContext("thief", "ROLE_USER");
         Long idReservation = 100L;
-        when(reservationRepository.findById(idReservation)).thenReturn(Optional.of(testReservation));
+        when(reservationRepository.findByIdWithFlightInstance(idReservation)).thenReturn(Optional.of(testReservation));
 
         BusinessRuleViolationException exception = assertThrows(
-                BusinessRuleViolationException.class, 
+                BusinessRuleViolationException.class,
                 () -> reservationService.cancelReservation(idReservation)
         );
         assertTrue(exception.getMessage().contains(String.format(ErrorCode.INSUFFICIENT_PERMISSIONS.getMessage(), "thief")));
@@ -165,12 +188,14 @@ class ReservationServiceImplTest {
         mockSecurityContext("pacog", "ROLE_USER");
         Long idReservation = 100L;
 
-        ReflectionTestUtils.setField(testFlight, "departureTime", LocalDateTime.now().plusHours(10));
-        
-        when(reservationRepository.findById(idReservation)).thenReturn(Optional.of(testReservation));
+        LocalDateTime imminentDeparture = LocalDateTime.now().plusHours(10);
+        ReflectionTestUtils.setField(testSchedule, "departureTime", imminentDeparture.toLocalTime());
+        ReflectionTestUtils.setField(testFlightInstance, "departureDate", imminentDeparture.toLocalDate());
+
+        when(reservationRepository.findByIdWithFlightInstance(idReservation)).thenReturn(Optional.of(testReservation));
 
         BusinessRuleViolationException exception = assertThrows(
-                BusinessRuleViolationException.class, 
+                BusinessRuleViolationException.class,
                 () -> reservationService.cancelReservation(idReservation)
         );
         assertTrue(exception.getMessage().contains(String.format(ErrorCode.CANCELLATION_TIME_EXPIRED.getMessage(), idReservation)));

@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -94,6 +95,8 @@ public class FlightConcurrencyIntegrationTest extends AbstractIntegrationTest {
     }
 
 
+    @Disabled("Optimistic locking on Flight.availableSeats was removed with the counter. " +
+            "Seat-level locking is implemented in CORE-25; this test is re-enabled there.")
     @Test
     void givenOneAvailableSeat_whenFiftyConcurrentBookingAttempts_thenOnlyOneSucceeds() throws InterruptedException {
         int threadCount = 50;

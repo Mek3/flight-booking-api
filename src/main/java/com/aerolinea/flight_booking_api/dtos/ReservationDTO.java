@@ -18,7 +18,7 @@ public class ReservationDTO {
 
     private Long id;
     private Long userId;
-    private Long flightId;
+    private Long flightInstanceId;
     private Integer numberOfPassengers;
 
     private String reservationCode;

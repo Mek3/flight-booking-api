@@ -24,10 +24,19 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>{
     List<Reservation> findByStatusAndCreatedAtBefore(ReservationStatus pending, LocalDateTime threshold);
 
     @Query("SELECT r.id FROM Reservation r WHERE r.status = :status AND r.createdAt < :threshold")
-    List<Long> findExpiredReservationIds(@Param("status") ReservationStatus status, 
+    List<Long> findExpiredReservationIds(@Param("status") ReservationStatus status,
                                          @Param("threshold") LocalDateTime threshold);
 
-    @EntityGraph(attributePaths = {"flight"})
+    @EntityGraph(attributePaths = {"flightInstance", "flightInstance.flightSchedule"})
     @Query("SELECT r FROM Reservation r WHERE r.id = :id")
-    Optional<Reservation> findByIdWithFlight(Long id);
+    Optional<Reservation> findByIdWithFlightInstance(Long id);
+
+    @Query("""
+            SELECT COALESCE(SUM(r.numberOfPassengers), 0)
+            FROM Reservation r
+            WHERE r.flightInstance.id = :flightInstanceId
+              AND r.status IN :statuses
+            """)
+    long sumPassengersByFlightInstanceId(@Param("flightInstanceId") Long flightInstanceId,
+                                         @Param("statuses") List<ReservationStatus> statuses);
 }
