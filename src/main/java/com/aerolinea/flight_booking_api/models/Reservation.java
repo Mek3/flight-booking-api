@@ -57,23 +57,18 @@ public class Reservation extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "flight_instance_id", nullable = false)
-    private FlightInstance flightInstance;
-
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("sequenceOrder ASC")
     private List<Itinerary> itineraries = new ArrayList<>();
 
     @Builder
     public Reservation(String reservationCode, ReservationStatus status, Integer numberOfPassengers,
-                       BigDecimal totalPrice, User user, FlightInstance flightInstance) {
+                       BigDecimal totalPrice, User user) {
         this.reservationCode = reservationCode;
         this.status = status;
         this.numberOfPassengers = numberOfPassengers;
         this.totalPrice = totalPrice;
         this.user = user;
-        this.flightInstance = flightInstance;
     }
 
     public void addItinerary(Itinerary itinerary) {
