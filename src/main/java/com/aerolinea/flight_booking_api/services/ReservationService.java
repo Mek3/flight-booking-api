@@ -8,8 +8,6 @@ import com.aerolinea.flight_booking_api.dtos.ReservationRequest;
 
 public interface ReservationService {
 
-     public ReservationDTO createReservation(ReservationRequest reservationRequest);
-
      void cancelReservation(Long idReservation);
 
      Page<ReservationDTO> getReservationsByUsername(Pageable pageable);
@@ -20,7 +18,7 @@ public interface ReservationService {
 
      ReservationDTO getReservationById(Long idReservation);
 
-     public void confirmReservation(Long id);
+     void confirmReservation(Long id);
 
      void expirePendingReservations();
 
