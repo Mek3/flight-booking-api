@@ -31,12 +31,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>{
     @Query("SELECT r FROM Reservation r WHERE r.id = :id")
     Optional<Reservation> findByIdWithFlightInstance(Long id);
 
-    @Query("""
-            SELECT COALESCE(SUM(r.numberOfPassengers), 0)
-            FROM Reservation r
-            WHERE r.flightInstance.id = :flightInstanceId
-              AND r.status IN :statuses
-            """)
-    long sumPassengersByFlightInstanceId(@Param("flightInstanceId") Long flightInstanceId,
-                                         @Param("statuses") List<ReservationStatus> statuses);
+    @EntityGraph(attributePaths = {
+            "itineraries",
+            "itineraries.segments",
+            "itineraries.segments.flightInstance",
+            "itineraries.segments.flightInstance.flightSchedule"})
+    @Query("SELECT r FROM Reservation r WHERE r.id = :id")
+    Optional<Reservation> findByIdWithItineraries(Long id);
 }

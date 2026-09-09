@@ -1,6 +1,6 @@
 package com.aerolinea.flight_booking_api.domain.seat;
 
-import com.aerolinea.flight_booking_api.dtos.Seat.SeatGenerationProjection;
+import com.aerolinea.flight_booking_api.dtos.seat.SeatGenerationProjection;
 import com.aerolinea.flight_booking_api.repositories.FlightInstanceRepository;
 import com.aerolinea.flight_booking_api.services.GenerationSeatServiceImpl;
 import com.aerolinea.flight_booking_api.services.SeatService;
