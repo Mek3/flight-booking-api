@@ -6,7 +6,10 @@ import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
+import com.aerolinea.flight_booking_api.dtos.booking.BookingRequest;
+import com.aerolinea.flight_booking_api.services.BookingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,7 +55,7 @@ public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
     private FlightService flightService;
 
     @Autowired
-    private ReservationService reservationService;
+    private BookingService bookingService;
 
     @MockitoSpyBean
     private FlightRepository flightRepository;
@@ -142,8 +145,9 @@ public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
         flightService.searchFlights(criteria, pageable);
         verify(flightRepository, times(1)).findAll(org.mockito.ArgumentMatchers.<Specification<Flight>>any(), eq(pageable));
 
-        ReservationRequest request = new ReservationRequest(bookableInstance.getId(), 1);
-        reservationService.createReservation(request);
+        BookingRequest request = new BookingRequest(1, List.of(
+                new BookingRequest.ItineraryRequest(List.of(bookableInstance.getId()))));
+        bookingService.createBooking(request);
 
         flightService.searchFlights(criteria, pageable);
         verify(flightRepository, times(2)).findAll(org.mockito.ArgumentMatchers.<Specification<Flight>>any(), eq(pageable));
