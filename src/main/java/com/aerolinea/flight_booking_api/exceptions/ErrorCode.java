@@ -58,6 +58,15 @@ public enum ErrorCode {
     SEAT_BULK_GENERATION_FAILED(8302L, "Failed to materialize bulk seats for flight instance ID: %s"),
     SEAT_ALREADY_BOOKED(8303L, "Seat %s is already booked for flight instance ID: %s"),
 
+    // Itinerary & Routing Domain (8400 - 8499)
+    ITINERARY_HAS_NO_SEGMENTS(8401L, "An itinerary must contain at least one flight segment"),
+    ITINERARY_TOO_MANY_SEGMENTS(8402L, "Itinerary has %s segments, exceeding the maximum of %s"),
+    SEGMENT_ARRIVES_BEFORE_DEPARTURE(8403L, "Segment %s arrives before it departs"),
+    SEGMENT_AIRPORT_DISCONTINUITY(8404L, "Segment %s arrives at %s but segment %s departs from %s"),
+    SEGMENT_TEMPORAL_OVERLAP(8405L, "Segment %s departs before segment %s has landed"),
+    LAYOVER_BELOW_MINIMUM_CONNECTION_TIME(8406L, "Layover of %s minutes is below the %s minute minimum connection time at %s"),
+    LAYOVER_ABOVE_MAXIMUM(8407L, "Layover of %s hours exceeds the maximum of %s hours"),
+
     // System & Framework (9000 - 9999)
     VALIDATION_ERROR(9001L, "Validation error: %s"),
     DATABASE_CONFLICT(9002L, "Database conflict detected: The resource may already exist or violates data constraints"),
