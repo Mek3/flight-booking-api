@@ -22,3 +22,7 @@ app:
       cron: "0 0 4 * * *"
       lock-at-least-for: "5m"
       lock-at-most-for: "15m"
+  routing:
+    minimum-connection-time: "45m"
+    maximum-layover-time: "24h"
+    maximum-segments: "4"
