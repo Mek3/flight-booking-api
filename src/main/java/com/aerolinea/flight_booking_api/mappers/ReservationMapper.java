@@ -12,11 +12,9 @@ import com.aerolinea.flight_booking_api.models.Reservation;
         unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ReservationMapper {
 
-    @Mapping(source="flightInstance.id", target = "flightInstanceId")
     @Mapping(source="user.id", target = "userId")
     ReservationDTO toReservationDTO(Reservation reservation);
 
-    @Mapping(source="flightInstanceId", target = "flightInstance")
     Reservation toReservation(ReservationRequest reservationRequest);
     
 } 
