@@ -1,6 +1,6 @@
 package com.aerolinea.flight_booking_api.services;
 
-import com.aerolinea.flight_booking_api.dtos.Seat.SeatGenerationProjection;
+import com.aerolinea.flight_booking_api.dtos.seat.SeatGenerationProjection;
 import com.aerolinea.flight_booking_api.repositories.FlightInstanceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
