@@ -1,5 +1,8 @@
 package com.aerolinea.flight_booking_api.controllers;
 
+import com.aerolinea.flight_booking_api.dtos.booking.BookingDTO;
+import com.aerolinea.flight_booking_api.dtos.booking.BookingRequest;
+import com.aerolinea.flight_booking_api.services.BookingService;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.aerolinea.flight_booking_api.dtos.ReservationDTO;
@@ -29,12 +32,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class ReservationController {
 
     private final ReservationService reservationService;
+    private final BookingService bookingService;
 
 
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PostMapping()
-    public ResponseEntity<ReservationDTO> createReservationDTO(@RequestBody @Valid ReservationRequest reservationRequest)  {
-        return ResponseEntity.status(HttpStatus.CREATED).body(reservationService.createReservation(reservationRequest));
+    public ResponseEntity<BookingDTO> createReservation(@RequestBody @Valid BookingRequest bookingRequest)  {
+        return ResponseEntity.status(HttpStatus.CREATED).body(bookingService.createBooking(bookingRequest));
     }
 
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
