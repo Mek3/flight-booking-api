@@ -15,10 +15,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 
+import com.aerolinea.flight_booking_api.security.CustomAccessDeniedHandler;
+import com.aerolinea.flight_booking_api.security.JwtAuthenticationEntryPoint;
+import com.aerolinea.flight_booking_api.security.SecurityConfig;
+import com.aerolinea.flight_booking_api.security.SecurityErrorResponder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +41,10 @@ import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
 import com.aerolinea.flight_booking_api.services.RouteService;
 
 @WebMvcTest(RouteController.class)
+@Import({SecurityConfig.class,
+        JwtAuthenticationEntryPoint.class,
+        CustomAccessDeniedHandler.class,
+        SecurityErrorResponder.class})
 public class RouteControllerTest extends AbstractControllerTest {
 
     @MockitoBean

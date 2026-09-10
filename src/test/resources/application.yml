@@ -6,8 +6,14 @@ spring:
       ddl-auto: none
 
 app:
+  cors:
+    allowed-origins: http://localhost:4200
   jwt:
     secret: VGVzdFNlY3JldEtleUZvckpXVFRva2Vuc1Byb3ZpZGVkQnlTcHJpbmdCb290QVBJ
+  routing:
+    minimum-connection-time: 45m
+    maximum-layover-time: 24h
+    maximum-segments: 4
   scheduling:
     reservation-cleanup-delay: 60000
     flight-generation:
