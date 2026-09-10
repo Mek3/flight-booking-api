@@ -9,3 +9,21 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+
+app:
+  cors:
+    allowed-origins: http://localhost:4200
+  routing:
+    minimum-connection-time: 45m
+    maximum-layover-time: 24h
+    maximum-segments: 4
+  scheduling:
+    reservation-cleanup-delay: 60000
+    flight-generation:
+      cron: "0 0 2 * * *"
+      lock-at-least-for: 5m
+      lock-at-most-for: 15m
+    seat-generation:
+      cron: "0 0 4 * * *"
+      lock-at-least-for: 5m
+      lock-at-most-for: 15m
