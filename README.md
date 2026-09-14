@@ -2,17 +2,19 @@
 
 [![CI Pipeline](https://github.com/Mek3/flight-booking-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Mek3/flight-booking-api/actions/workflows/ci.yml)
 
-The backend engine of an airline booking system: recurring flight schedules projected into dated instances, physical seats materialised per aircraft, and bookings built from multi-segment itineraries with temporal validation and concurrency-safe seat inventory.
+This is a backend API for an airline booking system.
 
-Built to explore the problems that make airline booking genuinely hard — not to be another CRUD demo.
+It does three main things. First, it takes flight schedules that repeat every week and creates flights on specific dates. Second, it creates the seats for each flight. Third, it handles bookings that can have one or more flights, checks that the times are correct, and makes sure two people cannot book the same seat.
 
-**Stack:** Java 17 · Spring Boot 3.5 · MySQL 8 · Redis · Spring Security (JWT) · Flyway · ShedLock · Testcontainers
+I built this project to work on the difficult parts of airline booking. I did not want to build another simple CRUD example.
 
-📖 **[Detailed feature documentation in the Wiki](https://github.com/Mek3/flight-booking-api/wiki)**
+**Stack:** Java 17 · Spring Boot 3.5 · MySQL 8 · Spring Security (JWT) · Flyway · ShedLock · Testcontainers
+
+📖 **[More documentation in the Wiki](https://github.com/Mek3/flight-booking-api/wiki)**
 
 ---
 
-## The domain model
+## Domain model
 
 ```
 User ──books──> Reservation
@@ -31,17 +33,15 @@ Seat ── belongs to one FlightInstance
   └── 0..1 active SeatReservation ──> FlightSegment
 ```
 
-**The rule that shapes everything:** an itinerary groups segments that continue the same
-journey. A round trip is *two* itineraries under one reservation — not four segments in
-one — because the days between an outbound flight and its return are not a layover, and
-treating them as one would reject perfectly valid bookings.
+**The main rule of the model:** one itinerary has the flights of one trip.
 
-A direct flight is an itinerary with a single segment. Not a special case: the degenerate
-case of the same structure.
+A round trip has *two* itineraries in the same reservation. It does not have four segments in one itinerary. The reason is simple: the days between the outbound flight and the return flight are not a layover. If I put them together, the validation would reject bookings that are correct.
+
+A direct flight is an itinerary with only one segment. It is not a special case. It is the same structure with one element.
 
 ---
 
-## Booking a round trip with a connection
+## Example: a round trip with a connection
 
 ```http
 POST /api/v1/reservations
@@ -58,9 +58,9 @@ Authorization: Bearer <token>
 }
 ```
 
-Two itineraries: the outbound connects through a second flight, the return is direct.
-Segment order comes from list position, so a client cannot submit a contradictory
-sequence.
+This request has two itineraries. The outbound trip has a connection. The return is a direct flight.
+
+The order of the segments comes from the position in the list. So the client cannot send an order that is wrong.
 
 ```json
 {
@@ -93,110 +93,96 @@ sequence.
 }
 ```
 
-Times are resolved through the flight instance, never stored on the segment — a
-rescheduled flight is reflected without touching booking data. The return flight lands the
-following day, which the schedule's arrival day offset makes explicit rather than leaving
-to inference.
+The segment does not store the times. It reads them from the flight instance. So if a flight changes its time, I do not need to change the booking data.
 
-Submit an itinerary whose second segment departs before the first lands, or from an
-airport the passenger never reaches, and the request fails before a single row is written.
+The return flight lands the next day. The schedule stores this as an arrival day offset, so the API does not have to guess it.
+
+The API also checks the trip before it saves anything. For example, if the second segment departs before the first one lands, or from an airport where the passenger never arrives, the request fails. Nothing is written to the database.
 
 ---
 
-## 🏆 Three things built to be verified, not read
+## 🏆 Three parts with tests
 
-**Genuinely idempotent seat generation**
-A `@DataJpaTest` runs the bulk seat-materialization insert twice against a real MySQL
-instance and asserts the seat count doesn't change. Idempotency proven at the database
-level rather than assumed from reading the code.
+**Idempotent seat generation**
+
+A `@DataJpaTest` runs the bulk seat insert two times against a real MySQL instance. Then it checks that the number of seats is the same. So the test proves idempotency in the database, not only in the code.
 → `SeatRepositoryJpaTest.java`
 
-**Routing rules with no framework attached**
-Temporal coherence, airport continuity and layover validation operate on a plain record,
-not on JPA entities. The entire rule set is unit-testable with no Spring context and no
-database: sixteen cases in milliseconds, including a layover sitting exactly on the
-minimum connection time and an overnight flight crossing midnight.
+**Routing rules without the framework**
+
+The validation of times, airports and layovers works on a plain Java record. It does not work on JPA entities.
+
+Because of this, I can test all the rules without a Spring context and without a database. There are sixteen test cases and they run in milliseconds. Two examples: a layover exactly on the minimum connection time, and a flight that crosses midnight.
 → `RoutingValidatorTest.java`
 
-**A uniqueness constraint that survives soft deletes**
-Seat reservations are guarded by a `UNIQUE` index over a generated column that evaluates
-to `NULL` for released holds — and MySQL does not treat `NULL`s as colliding. An expired
-hold frees its seat for a new reservation while the original row survives as an audit
-trail. The intuitive constraint on `(seat, segment)` would have been wrong: two bookings
-on the same flight produce two different segment rows, so it would have permitted selling
-the same seat twice.
+**A unique constraint that works with soft deletes**
+
+Seat reservations have a `UNIQUE` index on a generated column. This column is `NULL` when the seat is released. MySQL does not see two `NULL` values as a collision.
+
+So when a hold expires, the seat is free for a new reservation, but the old row stays in the table as history.
+
+The obvious solution, a constraint on `(seat, segment)`, does not work. Two bookings on the same flight create two different segment rows. So that constraint would allow selling the same seat two times.
 → `V*__add_seat_reservation.sql`
 
 ---
 
-## Design decisions worth arguing about
+## Design decisions
 
-**Derived over stored.** Seat availability, layover times and total travel time are
-computed from the operational record, never persisted. Nothing goes stale because nothing
-is duplicated — a delayed flight propagates to every derived value for free.
+**Calculate, do not store.** I do not save seat availability, layover times or total travel time in the database. I calculate them from the flight data. Nothing becomes old, because nothing is duplicated. If a flight is delayed, every calculated value is correct.
 
-**The database is the last line of defence.** Every idempotency and uniqueness guarantee
-is enforced by a constraint, not only by application logic: `INSERT IGNORE` plus a unique
-index for seat generation, a generated `active_flag` for flight instances, ShedLock for
-scheduled jobs. If the application logic were bypassed or a distributed lock failed, the
-data would still be correct.
+**The database also protects the data.** Every idempotency and uniqueness rule has a database constraint, not only application code. I use `INSERT IGNORE` with a unique index for the seats, a generated `active_flag` for flight instances, and ShedLock for the scheduled jobs. If somebody skips the application code, or if a lock fails, the data is still correct.
 
-**Business rules kept away from the framework.** Routing validation receives a record and
-returns a verdict. It knows nothing about JPA, Spring or repositories, which is why its
-tests need none of them.
+**Business rules are separate from the framework.** The routing validator receives a record and returns a result. It knows nothing about JPA, Spring or repositories. This is why its tests do not need them.
 
-**Errors have one contract, wherever they originate.** Security failures happen in the
-filter chain, before the `DispatcherServlet`, so `@RestControllerAdvice` cannot see them.
-A custom entry point (401) and access-denied handler (403) intercept there and serialise
-through the same responder and the same configured `ObjectMapper` — so a client cannot
-tell from the payload shape whether an error came from a filter or a controller.
+**All errors have the same format.** Security errors happen in the filter chain, before the `DispatcherServlet`. So `@RestControllerAdvice` cannot catch them.
+
+I added a custom entry point for 401 errors and an access denied handler for 403 errors. Both use the same responder and the same `ObjectMapper` as the controllers. The client cannot see from the response if the error comes from a filter or from a controller.
 
 ---
 
 ## 🗺️ Roadmap
 
-* ✅ **Sprint 5 — Foundations:** static topology (`airport`, `route`, `aircraft_model`, `aircraft`, `user`), Flyway and JPA groundwork.
-* ✅ **Sprint 6 — Calendars & Physical Inventory:** idempotent flight-instance generator and bulk seat materialization.
-* 🚧 **Sprint 7 — Routing & Booking Engine:** itinerary model, routing validation and the seat reservation model are merged. Remaining: transactional seat locking across segments, and the TTL reservation cart.
-* 🔜 **Sprint 8 — Spring Batch:** chunked ingestion and export of large CSV/XML datasets, with a dead-letter table for corrupt rows.
-* 🔜 **Sprint 9 — Event-Driven Architecture:** `BookingConfirmedEvent` consumed by a separately deployed service, orchestrated with Docker Compose.
-* 🔜 **Sprint 10 — Minimal Frontend:** three Angular screens consuming this API.
+* ✅ **Sprint 5 — Foundations:** static data (`airport`, `route`, `aircraft_model`, `aircraft`, `user`), plus Flyway and JPA setup.
+* ✅ **Sprint 6 — Calendars and seats:** idempotent flight instance generator and bulk seat creation.
+* 🚧 **Sprint 7 — Routing and booking engine:** the itinerary model, the routing validation and the seat reservation model are done. Still to do: transactional seat locking between segments, and the reservation cart with TTL.
+* 🔜 **Sprint 8 — Spring Batch:** import and export of large CSV and XML files in chunks, with a dead letter table for invalid rows.
+* 🔜 **Sprint 9 — Event driven architecture:** a `BookingConfirmedEvent` and a separate service that consumes it. Both run with Docker Compose.
+* 🔜 **Sprint 10 — Minimal frontend:** three Angular screens that use this API.
 
-### Consciously out of scope
+### Not included on purpose
 
-Documented rather than hidden — deciding where to stop is part of the design.
+I prefer to write these decisions here instead of hiding them. Deciding where to stop is also part of the design.
 
-* **Ticket and coupon model, and the financial domain** (invoices, refunds, baggage, dynamic pricing). The booking engine is the interesting problem; billing is well-trodden ground.
-* **`Passenger` as a distinct entity.** Bookings carry a passenger count, not per-traveller identity. Seat locking contends over seats, so a count produces the same contention; what is deferred is nominative ticket issuance.
-* **Token revocation, login rate limiting and refresh tokens.** All three require shared storage and therefore reintroduce the state the stateless design was chosen to avoid. Deliberate trade-offs, not omissions.
-* **Observability stack and an AI assistant.** Good additions; not what this project is demonstrating.
+* **Tickets, coupons and the financial domain** (invoices, refunds, baggage, dynamic pricing). The booking engine is the interesting problem in this project. Billing is a problem that many people have solved before.
+* **`Passenger` as a separate entity.** A booking stores the number of passengers, not the name of each one. Seat locking competes for seats, so a number creates the same contention. What is missing is tickets with names.
+* **Token revocation, login rate limiting and refresh tokens.** All three need shared storage. That brings back the state that a stateless design tries to avoid. These are decisions, not mistakes.
+* **Observability stack and an AI assistant.** Both are useful, but they are not the objective of this project.
 
 ---
 
-## ⚙️ Running it
+## ⚙️ How to run it
 
-**Requirements:** JDK 17, MySQL and Redis running locally, Docker for the tests.
+**You need:** JDK 17, MySQL running on your machine, and Docker for the tests.
 
 ```bash
-# Secrets via environment variables — nothing hardcoded, nothing committed
+# Secrets are environment variables. Nothing is in the code, nothing is committed.
 export DB_LOCAL_USER=root DB_LOCAL_PASSWORD=root JWT_SECRET_LOCAL=<your-secret>
 
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-Schema and seed data (users, roles) are applied on startup by Flyway.
+Flyway creates the schema and the seed data (users and roles) when the application starts.
 
 ```bash
 mvn test
 ```
 
-Testcontainers provisions ephemeral MySQL and Redis containers, runs the suite and tears
-them down. No manual setup, and identical behaviour locally and in CI.
+Testcontainers creates temporary MySQL containers, runs the tests, and deletes them. You do not need any manual setup, and the tests work the same on your machine and in CI.
 
-**API documentation:** Swagger UI at `/swagger-ui.html` once running.
+**API documentation:** Swagger UI at `/swagger-ui.html` when the application is running.
 
 ### Authentication
 
-`POST /api/v1/auth/register` or `/api/v1/auth/login`, then send the returned JWT as a
-Bearer token. `ROLE_ADMIN` manages infrastructure (airports, aircraft, routes, schedules);
-`ROLE_USER` searches flights and manages their own bookings.
+Use `POST /api/v1/auth/register` or `/api/v1/auth/login`. Then send the JWT as a Bearer token.
+
+`ROLE_ADMIN` manages the infrastructure: airports, aircraft, routes and schedules. `ROLE_USER` searches flights and manages their own bookings.
