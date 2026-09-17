@@ -5,7 +5,6 @@ import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationExceptio
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
 import com.aerolinea.flight_booking_api.mappers.BookingMapper;
-import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
 import com.aerolinea.flight_booking_api.models.*;
 import com.aerolinea.flight_booking_api.models.enums.FlightStatus;
 import com.aerolinea.flight_booking_api.repositories.FlightInstanceRepository;
@@ -13,9 +12,9 @@ import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
 import com.aerolinea.flight_booking_api.repositories.UserRepository;
 import com.aerolinea.flight_booking_api.services.BookingFactory;
 import com.aerolinea.flight_booking_api.services.BookingServiceImpl;
-import com.aerolinea.flight_booking_api.services.ReservationServiceImpl;
-
+import com.aerolinea.flight_booking_api.services.SeatReservationService;
 import com.aerolinea.flight_booking_api.services.routing.ItineraryRoutingService;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,6 +22,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -37,11 +37,17 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class BookingCreationTest {
@@ -62,15 +68,16 @@ class BookingCreationTest {
     private ItineraryRoutingService itineraryRoutingService;
 
     @Mock
-    private ReservationMapper reservationMapper;
+    private SeatReservationService seatReservationService;
+
+    @Mock
+    private BookingMapper bookingMapper;
 
     @Spy
     private BookingFactory bookingFactory = new BookingFactory();
 
     @InjectMocks
     private BookingServiceImpl bookingService;
-    @Mock
-    private BookingMapper bookingMapper;
 
     private User testUser;
 
@@ -112,7 +119,16 @@ class BookingCreationTest {
     }
 
     private BookingRequest request(int passengers, List<Long> instanceIds) {
-        return new BookingRequest(passengers, List.of(new BookingRequest.ItineraryRequest(instanceIds)));
+        List<BookingRequest.FlightSegmentRequest> segments = instanceIds.stream()
+                .map(instanceId -> new BookingRequest.FlightSegmentRequest(instanceId, seatIdsFor(instanceId, passengers)))
+                .toList();
+
+        return new BookingRequest(passengers, List.of(new BookingRequest.ItineraryRequest(segments)));
+    }
+
+    private List<Long> seatIdsFor(Long instanceId, int passengers) {
+        long firstSeatId = instanceId * 1000;
+        return LongStream.range(0, passengers).map(offset -> firstSeatId + offset).boxed().toList();
     }
 
     private void givenUserExists() {
@@ -121,6 +137,16 @@ class BookingCreationTest {
 
     private void givenInstances(FlightInstance... instances) {
         when(flightInstanceRepository.findByIdInWithSchedule(anyList())).thenReturn(List.of(instances));
+    }
+
+    private void givenReservationIsSavedAsIs() {
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(call -> call.getArgument(0));
+    }
+
+    private Reservation capturedReservation() {
+        ArgumentCaptor<Reservation> captor = ArgumentCaptor.forClass(Reservation.class);
+        verify(reservationRepository).save(captor.capture());
+        return captor.getValue();
     }
 
     @Nested
@@ -134,14 +160,11 @@ class BookingCreationTest {
             givenInstances(
                     instance(101L, "ALC", "MAD", 8, 9, "100.00"),
                     instance(205L, "MAD", "JFK", 12, 20, "400.00"));
-            when(reservationRepository.save(any(Reservation.class))).thenAnswer(call -> call.getArgument(0));
+            givenReservationIsSavedAsIs();
 
             bookingService.createBooking(request(1, List.of(101L, 205L)));
 
-            ArgumentCaptor<Reservation> captor = ArgumentCaptor.forClass(Reservation.class);
-            verify(reservationRepository).save(captor.capture());
-
-            List<FlightSegment> segments = captor.getValue().getItineraries().get(0).getSegments();
+            List<FlightSegment> segments = capturedReservation().getItineraries().get(0).getSegments();
 
             assertThat(segments).hasSize(2);
             assertThat(segments.get(0).getSegmentOrder()).isEqualTo(1);
@@ -157,14 +180,11 @@ class BookingCreationTest {
             givenInstances(
                     instance(101L, "ALC", "MAD", 8, 9, "100.00"),
                     instance(205L, "MAD", "JFK", 12, 20, "400.00"));
-            when(reservationRepository.save(any(Reservation.class))).thenAnswer(call -> call.getArgument(0));
+            givenReservationIsSavedAsIs();
 
             bookingService.createBooking(request(3, List.of(101L, 205L)));
 
-            ArgumentCaptor<Reservation> captor = ArgumentCaptor.forClass(Reservation.class);
-            verify(reservationRepository).save(captor.capture());
-
-            assertThat(captor.getValue().getTotalPrice()).isEqualByComparingTo(new BigDecimal("1500.00"));
+            assertThat(capturedReservation().getTotalPrice()).isEqualByComparingTo(new BigDecimal("1500.00"));
         }
 
         @Test
@@ -172,15 +192,29 @@ class BookingCreationTest {
         void shouldStartPending() {
             givenUserExists();
             givenInstances(instance(101L, "ALC", "MAD", 8, 9, "100.00"));
-            when(reservationRepository.save(any(Reservation.class))).thenAnswer(call -> call.getArgument(0));
+            givenReservationIsSavedAsIs();
 
             bookingService.createBooking(request(1, List.of(101L)));
 
-            ArgumentCaptor<Reservation> captor = ArgumentCaptor.forClass(Reservation.class);
-            verify(reservationRepository).save(captor.capture());
+            Reservation reservation = capturedReservation();
 
-            assertThat(captor.getValue().getStatus()).isEqualTo(ReservationStatus.PENDING);
-            assertThat(captor.getValue().getReservationCode()).isNotBlank();
+            assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.PENDING);
+            assertThat(reservation.getReservationCode()).isNotBlank();
+        }
+
+        @Test
+        @DisplayName("Should acquire seat locks before persisting the reservation")
+        void shouldLockSeatsBeforeSaving() {
+            givenUserExists();
+            givenInstances(instance(101L, "ALC", "MAD", 8, 9, "100.00"));
+            givenReservationIsSavedAsIs();
+
+            bookingService.createBooking(request(1, List.of(101L)));
+
+            InOrder inOrder = inOrder(seatReservationService, reservationRepository);
+            inOrder.verify(seatReservationService).acquireSeatLocksAndValidate(anyList());
+            inOrder.verify(reservationRepository).save(any(Reservation.class));
+            inOrder.verify(seatReservationService).createHoldsForReservation(any(Reservation.class), any());
         }
     }
 
@@ -203,6 +237,7 @@ class BookingCreationTest {
                     .isInstanceOf(BusinessRuleViolationException.class);
 
             verify(reservationRepository, never()).save(any(Reservation.class));
+            verify(seatReservationService, never()).acquireSeatLocksAndValidate(anyList());
         }
 
         @Test
@@ -227,6 +262,22 @@ class BookingCreationTest {
                     .isInstanceOf(ResourceNotFoundException.class);
 
             verify(reservationRepository, never()).save(any(Reservation.class));
+        }
+
+        @Test
+        @DisplayName("Should not persist anything when a requested seat is already taken")
+        void shouldAbortWhenSeatUnavailable() {
+            givenUserExists();
+            givenInstances(instance(101L, "ALC", "MAD", 8, 9, "100.00"));
+
+            doThrow(new BusinessRuleViolationException(ErrorCode.SEAT_ALREADY_BOOKED, "taken"))
+                    .when(seatReservationService).acquireSeatLocksAndValidate(anyList());
+
+            assertThatThrownBy(() -> bookingService.createBooking(request(1, List.of(101L))))
+                    .isInstanceOf(BusinessRuleViolationException.class);
+
+            verify(reservationRepository, never()).save(any(Reservation.class));
+            verify(seatReservationService, never()).createHoldsForReservation(any(Reservation.class), any());
         }
     }
 }
