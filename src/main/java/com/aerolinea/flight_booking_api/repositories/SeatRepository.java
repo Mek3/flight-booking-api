@@ -16,7 +16,7 @@ public interface SeatRepository extends JpaRepository<Seat, Long>, SeatRepositor
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Seat s WHERE s.id IN :ids ORDER BY s.id")
-    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000")})
+    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "0")})
     List<Seat> lockSeats(@Param("ids") List<Long> ids);
 
     @Query("""
