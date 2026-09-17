@@ -279,5 +279,37 @@ class BookingCreationTest {
             verify(reservationRepository, never()).save(any(Reservation.class));
             verify(seatReservationService, never()).createHoldsForReservation(any(Reservation.class), any());
         }
+
+
+        @Test
+        @DisplayName("Should not persist anything when seat selection is invalid (e.g., mismatching counts)")
+        void shouldAbortWhenSeatSelectionIsInvalid() {
+            givenUserExists();
+
+            doThrow(new BusinessRuleViolationException(ErrorCode.SEAT_COUNT_MISMATCH, "mismatch"))
+                    .when(seatReservationService).validateSeatSelection(anyList(), any(Integer.class));
+
+            assertThatThrownBy(() -> bookingService.createBooking(request(1, List.of(101L))))
+                    .isInstanceOf(BusinessRuleViolationException.class);
+
+            verify(flightInstanceRepository, never()).findByIdInWithSchedule(anyList());
+            verify(reservationRepository, never()).save(any(Reservation.class));
+        }
+
+        @Test
+        @DisplayName("Should not persist anything when requested seats do not belong to the flight")
+        void shouldAbortWhenSeatsDoNotBelongToFlight() {
+            givenUserExists();
+            givenInstances(instance(101L, "ALC", "MAD", 8, 9, "100.00"));
+
+            doThrow(new ResourceNotFoundException(ErrorCode.SEAT_NOT_ON_SEGMENT_FLIGHT, "wrong flight"))
+                    .when(seatReservationService).validateSeatsBelongToFlights(anyList());
+
+            assertThatThrownBy(() -> bookingService.createBooking(request(1, List.of(101L))))
+                    .isInstanceOf(ResourceNotFoundException.class);
+
+            verify(reservationRepository, never()).save(any(Reservation.class));
+            verify(seatReservationService, never()).acquireSeatLocksAndValidate(anyList());
+        }
     }
 }
