@@ -57,6 +57,10 @@ public enum ErrorCode {
     SEAT_NOT_FOUND(8301L, "Seat not found with ID: %s"),
     SEAT_BULK_GENERATION_FAILED(8302L, "Failed to materialize bulk seats for flight instance ID: %s"),
     SEAT_ALREADY_BOOKED(8303L, "Seat %s is already booked for flight instance ID: %s"),
+    SEAT_CURRENTLY_LOCKED(8304L, "Seat %s is currently being booked by another user. Please try again later."),
+    SEAT_COUNT_MISMATCH(8305L, "The number of selected seats (%s) does not match the number of passengers (%s)"),
+    DUPLICATE_SEAT_IN_SEGMENT(8306L, "Duplicate seat IDs found in the flight segment request: %s"),
+    DUPLICATE_FLIGHT_INSTANCE_IN_BOOKING(8307L, "Duplicate flight instances found in the booking request: %s"),
 
     // Itinerary & Routing Domain (8400 - 8499)
     ITINERARY_HAS_NO_SEGMENTS(8401L, "An itinerary must contain at least one flight segment"),
