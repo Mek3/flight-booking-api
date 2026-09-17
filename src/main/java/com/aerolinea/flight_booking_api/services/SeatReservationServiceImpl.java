@@ -100,7 +100,7 @@ public class SeatReservationServiceImpl implements SeatReservationService {
 
         if (hasConfirmed) {
             throw new BusinessRuleViolationException(ErrorCode.SEAT_ALREADY_BOOKED,
-                    String.format(ErrorCode.SEAT_ALREADY_BOOKED.getMessage(), seatIds));
+                    String.format(ErrorCode.SEAT_ALREADY_BOOKED.getMessage(), String.join(", ", seatIds.stream().map(String::valueOf).toList())));
         }
 
         boolean hasHeld = seatReservations.stream()
@@ -108,7 +108,7 @@ public class SeatReservationServiceImpl implements SeatReservationService {
 
         if (hasHeld) {
             throw new BusinessRuleViolationException(ErrorCode.SEAT_CURRENTLY_LOCKED,
-                    String.format(ErrorCode.SEAT_CURRENTLY_LOCKED.getMessage(), seatIds));
+                    String.format(ErrorCode.SEAT_CURRENTLY_LOCKED.getMessage(), String.join(", ", seatIds.stream().map(String::valueOf).toList())));
         }
     }
 
