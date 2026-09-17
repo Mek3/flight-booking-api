@@ -6,6 +6,8 @@ spring:
       ddl-auto: none
 
 app:
+  booking:
+    cart-ttl: 15m
   cors:
     allowed-origins: http://localhost:4200
   jwt:
