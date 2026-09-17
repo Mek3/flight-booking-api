@@ -12,6 +12,11 @@ public record BookingRequest(
         @NotEmpty @Valid List<ItineraryRequest> itineraries) {
 
     public record ItineraryRequest(
-            @NotEmpty List<Long> flightInstanceIds) {
+            @NotEmpty List<FlightSegmentRequest> flightSegments) {
+    }
+
+    public record FlightSegmentRequest(
+            @NotNull Long flightInstanceId,
+            @NotEmpty List<Long> seatIds) {
     }
 }
