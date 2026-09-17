@@ -145,8 +145,17 @@ public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
         flightService.searchFlights(criteria, pageable);
         verify(flightRepository, times(1)).findAll(org.mockito.ArgumentMatchers.<Specification<Flight>>any(), eq(pageable));
 
+        Long validSeatId = seatRepository.findAll().stream()
+                .filter(seat -> seat.getFlightInstance().getId().equals(bookableInstance.getId()))
+                .findFirst()
+                .orElseThrow()
+                .getId();
+
         BookingRequest request = new BookingRequest(1, List.of(
-                new BookingRequest.ItineraryRequest(List.of(bookableInstance.getId()))));
+                new BookingRequest.ItineraryRequest(List.of(
+                        new BookingRequest.FlightSegmentRequest(bookableInstance.getId(), List.of(validSeatId))
+                ))
+        ));
         bookingService.createBooking(request);
 
         flightService.searchFlights(criteria, pageable);

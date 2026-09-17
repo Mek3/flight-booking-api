@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import com.aerolinea.flight_booking_api.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,6 +17,12 @@ public interface SeatReservationRepository extends JpaRepository<SeatReservation
     Optional<SeatReservation> findBySeatIdAndStatusIn(Long seatId, List<SeatReservationStatus> statuses);
 
     List<SeatReservation> findByFlightSegmentId(Long flightSegmentId);
+
+    @Query("""
+            SELECT sr FROM SeatReservation sr
+            WHERE sr.seat.id in (:seatIds) and sr.occupiedFlag = true
+            """)
+    List<SeatReservation> findBySeatIdIn(@Param("seatIds") List<Long> seatIds);
 
     @Query("""
             SELECT sr.id FROM SeatReservation sr

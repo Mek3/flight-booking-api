@@ -27,3 +27,5 @@ app:
       cron: "0 0 4 * * *"
       lock-at-least-for: 5m
       lock-at-most-for: 15m
+  booking:
+    cart-ttl: 15m

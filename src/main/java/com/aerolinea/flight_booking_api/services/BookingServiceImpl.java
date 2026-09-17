@@ -1,29 +1,23 @@
 package com.aerolinea.flight_booking_api.services;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.aerolinea.flight_booking_api.dtos.booking.BookingRequest;
 import com.aerolinea.flight_booking_api.dtos.booking.BookingDTO;
 import com.aerolinea.flight_booking_api.mappers.BookingMapper;
+import com.aerolinea.flight_booking_api.models.*;
+import com.aerolinea.flight_booking_api.repositories.*;
 import com.aerolinea.flight_booking_api.services.routing.ItineraryRoutingService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
-import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
-import com.aerolinea.flight_booking_api.models.FlightInstance;
-import com.aerolinea.flight_booking_api.models.Itinerary;
-import com.aerolinea.flight_booking_api.models.Reservation;
-import com.aerolinea.flight_booking_api.models.User;
-import com.aerolinea.flight_booking_api.repositories.FlightInstanceRepository;
-import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
-import com.aerolinea.flight_booking_api.repositories.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,18 +33,26 @@ public class BookingServiceImpl implements BookingService {
     private final ItineraryRoutingService itineraryRoutingService;
     private final BookingFactory bookingFactory;
     private final BookingMapper bookingMapper;
+    private final SeatReservationService seatReservationService;
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     @CacheEvict(value = "flightSearchCache", allEntries = true)
     public BookingDTO createBooking(BookingRequest request) {
 
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.USER_NOT_FOUND,
                         String.format(ErrorCode.USER_NOT_FOUND.getMessage(), username)));
 
-        Map<Long, FlightInstance> instances = loadInstances(bookingFactory.requestedInstanceIds(request));
+        List<BookingRequest.FlightSegmentRequest> segments = request.itineraries().stream()
+                .flatMap(itinerary -> itinerary.flightSegments().stream())
+                .toList();
+
+        seatReservationService.validateSeatSelection(segments, request.numberOfPassengers());
+
+        Map<Long, FlightInstance> instances = loadInstances(bookingFactory.extractAndValidateInstanceIds(request));
+
+        seatReservationService.validateSeatsBelongToFlights(segments);
 
         Reservation reservation = bookingFactory.assemble(request, user, instances);
 
@@ -58,7 +60,15 @@ public class BookingServiceImpl implements BookingService {
             itineraryRoutingService.validate(itinerary);
         }
 
+        List<Long> sortedSeatIds = segments.stream()
+                .flatMap(segment -> segment.seatIds().stream())
+                .sorted()
+                .toList();
+        List<Seat> lockedSeats = seatReservationService.acquireSeatLocksAndValidate(sortedSeatIds);
+
         Reservation saved = reservationRepository.save(reservation);
+
+        seatReservationService.createHoldsForReservation(saved, lockedSeats);
 
         log.info("Booking created. Code: {} | User: {} | Itineraries: {} | Passengers: {}",
                 saved.getReservationCode(), username, saved.getItineraries().size(), saved.getNumberOfPassengers());
@@ -70,8 +80,12 @@ public class BookingServiceImpl implements BookingService {
         List<FlightInstance> found = flightInstanceRepository.findByIdInWithSchedule(ids);
 
         if (found.size() != ids.size()) {
+            Set<Long> foundIds = found.stream()
+                    .map(FlightInstance::getId)
+                    .collect(Collectors.toSet());
+
             Long missing = ids.stream()
-                    .filter(id -> found.stream().noneMatch(instance -> instance.getId().equals(id)))
+                    .filter(id -> !foundIds.contains(id))
                     .findFirst()
                     .orElse(null);
 
