@@ -13,6 +13,7 @@ import com.aerolinea.flight_booking_api.services.routing.ItineraryRoutingService
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
@@ -34,7 +35,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingMapper bookingMapper;
     private final SeatReservationService seatReservationService;
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     @CacheEvict(value = "flightSearchCache", allEntries = true)
     public BookingDTO createBooking(BookingRequest request) {
 
