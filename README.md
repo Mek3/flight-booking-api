@@ -8,29 +8,61 @@ It does three main things. First, it takes flight schedules that repeat every we
 
 I built this project to work on the difficult parts of airline booking. I did not want to build another simple CRUD example.
 
-**Stack:** Java 17 · Spring Boot 3.5 · MySQL 8 · Spring Security (JWT) · Flyway · ShedLock · Testcontainers
+**Stack:** Java 17 · Spring Boot 3.5 · MySQL 8 · Redis · Spring Security (JWT) · Flyway · ShedLock · Testcontainers
 
-📖 **[More documentation in the Wiki](https://github.com/Mek3/flight-booking-api/wiki)**
+📖 **[Documentation](https://github.com/Mek3/flight-booking-api/wiki)** · 🧭 **[Technical decisions](https://github.com/Mek3/flight-booking-api/wiki/Technical-Decisions)**
 
 ---
 
 ## Domain model
 
-```
-User ──books──> Reservation
-                    │  code, status, passengers, total price
-                    │
-                    └── 1..N Itinerary            sequenceOrder: outbound = 1, return = 2
-                             │
-                             └── 1..N FlightSegment        segmentOrder: 1, 2, 3...
-                                      │
-                                      └── FlightInstance   a flight on a concrete date
-                                               │
-                                               ├── FlightSchedule ──> Airport ×2, AircraftLayout
-                                               └── Aircraft
+```mermaid
+erDiagram
+    User ||--o{ Reservation : books
+    Reservation ||--|{ Itinerary : "1..N"
+    Itinerary ||--|{ FlightSegment : "1..N"
+    FlightSegment }o--|| FlightInstance : references
+    FlightInstance }o--|| FlightSchedule : "on a date"
+    FlightInstance }o--|| Aircraft : "flown by"
+    FlightSchedule }o--|| Airport : departs
+    FlightSchedule }o--|| Airport : arrives
+    FlightSchedule }o--|| AircraftLayout : "cabin plan"
+    FlightInstance ||--|{ Seat : materialises
+    Seat ||--o| SeatReservation : "0..1 active"
+    SeatReservation }o--|| FlightSegment : "holds for"
 
-Seat ── belongs to one FlightInstance
-  └── 0..1 active SeatReservation ──> FlightSegment
+    Reservation {
+        string reservationCode
+        enum status
+        int numberOfPassengers
+        decimal totalPrice
+    }
+    Itinerary {
+        int sequenceOrder "outbound = 1, return = 2"
+    }
+    FlightSegment {
+        int segmentOrder "1, 2, 3..."
+    }
+    FlightInstance {
+        date departureDate
+        enum status
+    }
+    FlightSchedule {
+        string flightNumber
+        time departureTime
+        time arrivalTime
+        int arrivalDayOffset "0 = same day, 1 = overnight"
+        int daysOfWeekMask
+        decimal basePrice
+    }
+    Seat {
+        int rowNumber
+        string seatLetter
+    }
+    SeatReservation {
+        enum status "HELD, CONFIRMED, EXPIRED"
+        datetime heldUntil
+    }
 ```
 
 **The main rule of the model:** one itinerary has the flights of one trip.
@@ -48,59 +80,89 @@ POST /api/v1/reservations
 Authorization: Bearer <token>
 ```
 
-```json
+```jsonc
 {
   "numberOfPassengers": 2,
   "itineraries": [
-    { "flightInstanceIds": [101, 205] },
-    { "flightInstanceIds": [412] }
+    { "flightSegments": [
+        { "flightInstanceId": 101, "seatIds": [4501, 4502] },   // ALC → MAD
+        { "flightInstanceId": 205, "seatIds": [8830, 8831] }    // MAD → JFK, the connection
+    ]},
+    { "flightSegments": [
+        { "flightInstanceId": 412, "seatIds": [9120, 9121] }    // JFK → ALC, direct
+    ]}
   ]
 }
 ```
 
-This request has two itineraries. The outbound trip has a connection. The return is a direct flight.
+Two itineraries: the outbound has a connection, the return is direct. Segment order comes from the position in the list, so a client cannot send an order that contradicts itself. One seat per passenger on every segment.
 
-The order of the segments comes from the position in the list. So the client cannot send an order that is wrong.
-
-```json
+```jsonc
 {
   "id": 88,
   "reservationCode": "3EA31A83",
-  "status": "PENDING",
+  "status": "PENDING",                    // seats are held, not yet paid
   "numberOfPassengers": 2,
-  "totalPrice": 1500.00,
+  "totalPrice": 1500.00,                  // sum of the three segment fares × 2 passengers
   "itineraries": [
     {
-      "sequenceOrder": 1,
+      "sequenceOrder": 1,                 // outbound
       "segments": [
         { "segmentOrder": 1, "flightNumber": "IBE-101",
           "departureAirport": "ALC", "departureAt": "2026-10-15T08:00:00",
           "arrivalAirport": "MAD",   "arrivalAt": "2026-10-15T09:00:00" },
+
+        // 90 minutes in Madrid — above the 45 minute minimum connection time
         { "segmentOrder": 2, "flightNumber": "IBE-205",
           "departureAirport": "MAD", "departureAt": "2026-10-15T10:30:00",
           "arrivalAirport": "JFK",   "arrivalAt": "2026-10-15T18:30:00" }
       ]
     },
     {
-      "sequenceOrder": 2,
-      "segments": [
+      "sequenceOrder": 2,                 // return, seven days later — not a layover,
+      "segments": [                       // which is why it is a separate itinerary
         { "segmentOrder": 1, "flightNumber": "IBE-412",
           "departureAirport": "JFK", "departureAt": "2026-10-22T21:00:00",
           "arrivalAirport": "ALC",   "arrivalAt": "2026-10-23T11:00:00" }
+          // departs 21:00, lands 11:00 the next day: the schedule stores that
+          // as an arrival day offset, so the API never has to guess it
       ]
     }
   ]
 }
 ```
 
-The segment does not store the times. It reads them from the flight instance. So if a flight changes its time, I do not need to change the booking data.
+Segments store no times of their own — they read them from the flight instance. A rescheduled flight is reflected without touching any booking data.
 
-The return flight lands the next day. The schedule stores this as an arrival day offset, so the API does not have to guess it.
-
-The API also checks the trip before it saves anything. For example, if the second segment departs before the first one lands, or from an airport where the passenger never arrives, the request fails. Nothing is written to the database.
+The whole trip is validated before anything is written. A segment that departs before the previous one lands, or from an airport the passenger never reaches, fails the request with nothing saved.
 
 ---
 
+## How a booking is created
+
+```mermaid
+flowchart TD
+    A["POST /api/v1/reservations"] --> B["Read user from the security context<br/><i>never from the payload</i>"]
+    B --> C["Load every flight instance<br/><i>one query, with schedules and airports</i>"]
+    C --> D["Validate the seat selection<br/><i>duplicates, one seat per passenger</i>"]
+    D --> E["Assemble the booking graph<br/><i>in memory — nothing persisted yet</i>"]
+    E --> F["Validate routing<br/><i>times, airport continuity, layovers</i>"]
+    F --> G{"Coherent?"}
+    G -->|No| H["Reject<br/><i>nothing was ever written</i>"]
+    G -->|Yes| I["Lock the seats<br/><i>sorted ids, NOWAIT</i>"]
+    I --> J{"Still free?"}
+    J -->|No| K["Reject<br/><i>rollback releases every lock</i>"]
+    J -->|Yes| L["Save the reservation<br/><i>cascades to itineraries and segments</i>"]
+    L --> M["Create the holds<br/><i>expire in 15 minutes</i>"]
+
+    style I fill:#2d3748,stroke:#90cdf4,color:#fff
+    style L fill:#2d3748,stroke:#90cdf4,color:#fff
+```
+
+**The order is the point.** Everything that can fail for a reason other than
+concurrency fails before a single lock is taken, so locks are held for as little
+time as possible. And because the graph is assembled in memory, a rejected
+booking leaves nothing behind — the guarantee does not depend on a rollback.
 ## 🏆 Three parts with tests
 
 **Idempotent seat generation**
@@ -140,11 +202,53 @@ I added a custom entry point for 401 errors and an access denied handler for 403
 
 ---
 
+## Seat hold lifecycle
+
+A `seat_reservation` is the row that makes a seat unavailable. Its state — not its
+existence — is what holds the seat.
+
+```mermaid
+stateDiagram-v2
+    [*] --> HELD : booking created<br/>heldUntil = now + 15 min
+
+    HELD --> CONFIRMED : payment confirmed
+    HELD --> EXPIRED : sweep finds heldUntil in the past
+
+    CONFIRMED --> [*] : terminal
+    EXPIRED --> [*] : terminal
+
+    note right of HELD
+        occupied_flag = TRUE
+        the seat cannot be booked
+    end note
+
+    note right of CONFIRMED
+        occupied_flag = TRUE
+        sold — never expires
+    end note
+
+    note right of EXPIRED
+        occupied_flag = NULL
+        the seat is free again,
+        the row survives as history
+    end note
+```
+
+**`occupied_flag` is a generated column**, `TRUE` while the status is `HELD` or
+`CONFIRMED` and `NULL` otherwise. A `UNIQUE` index over `(seat_id, occupied_flag)`
+therefore allows one active reservation per seat, and — because MySQL does not treat
+`NULL`s as colliding — an expired hold frees its seat without the row being deleted.
+
+**Both end states are terminal**, which is how the race between expiry and payment
+resolves: a hold confirmed moments before the sweep runs is no longer `HELD`, so the
+sweep does not match it, and the state machine would refuse the transition even if it
+did.
+
 ## 🗺️ Roadmap
 
 * ✅ **Sprint 5 — Foundations:** static data (`airport`, `route`, `aircraft_model`, `aircraft`, `user`), plus Flyway and JPA setup.
 * ✅ **Sprint 6 — Calendars and seats:** idempotent flight instance generator and bulk seat creation.
-* 🚧 **Sprint 7 — Routing and booking engine:** the itinerary model, the routing validation and the seat reservation model are done. Still to do: transactional seat locking between segments, and the reservation cart with TTL.
+* ✅ **Sprint 7 — Routing and booking engine:** multi-segment itineraries, routing validation, atomic seat locking across segments, and the reservation cart with TTL.
 * 🔜 **Sprint 8 — Spring Batch:** import and export of large CSV and XML files in chunks, with a dead letter table for invalid rows.
 * 🔜 **Sprint 9 — Event driven architecture:** a `BookingConfirmedEvent` and a separate service that consumes it. Both run with Docker Compose.
 * 🔜 **Sprint 10 — Minimal frontend:** three Angular screens that use this API.
