@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -61,11 +62,15 @@ public class FlightSearchIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private SeatRepository seatRepository;
 
+    @Autowired
+    private CacheManager cacheManager;
+
     private final Pageable pageable = PageRequest.of(0, 10);
 
     @BeforeEach
     void setUp() {
-        // 1. Preparar infraestructura
+        cacheManager.getCache("flightSearchCache").clear();
+
         Airport mad = airportRepository.save(AirportFactory.validAirportBuilder("MAD").build());
         Airport jfk = airportRepository.save(AirportFactory.validAirportBuilder("JFK").build());
         Airport bcn = airportRepository.save(AirportFactory.validAirportBuilder("BCN").build());
