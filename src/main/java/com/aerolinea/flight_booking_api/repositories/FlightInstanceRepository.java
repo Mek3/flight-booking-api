@@ -4,15 +4,17 @@ import com.aerolinea.flight_booking_api.dtos.seat.SeatGenerationProjection;
 import com.aerolinea.flight_booking_api.models.FlightInstance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface FlightInstanceRepository  extends JpaRepository<FlightInstance, Long> {
+public interface FlightInstanceRepository  extends JpaRepository<FlightInstance, Long>, JpaSpecificationExecutor<FlightInstance> {
 
     @Query("SELECT new  com.aerolinea.flight_booking_api.dtos.seat.SeatGenerationProjection(" +
             "fi.id, al.totalRows, al.seatLetters) " +
@@ -33,4 +35,12 @@ public interface FlightInstanceRepository  extends JpaRepository<FlightInstance,
             "flightSchedule.arrivalAirport"})
     @Query("SELECT fi FROM FlightInstance fi WHERE fi.id IN :ids")
     List<FlightInstance> findByIdInWithSchedule(@Param("ids") List<Long> ids);
+
+    @Override
+    @EntityGraph(attributePaths = {
+            "flightSchedule",
+            "flightSchedule.departureAirport",
+            "flightSchedule.arrivalAirport"
+    })
+    Page<FlightInstance> findAll(Specification<FlightInstance> spec, Pageable pageable);
 }
