@@ -1,6 +1,7 @@
 package com.aerolinea.flight_booking_api.repositories;
 
 import com.aerolinea.flight_booking_api.models.Seat;
+import com.aerolinea.flight_booking_api.repositories.projections.FlightInstanceCountProjection;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,4 +27,12 @@ public interface SeatRepository extends JpaRepository<Seat, Long>, SeatRepositor
               AND s.id IN :seatIds
         """)
     long countSeatsByFlightInstanceIdAndSeatIds(@Param("flightInstanceId") Long flightInstanceId, @Param("seatIds") List<Long> seatIds);
+
+    @Query("""
+        SELECT s.flightInstance.id AS flightInstanceId, COUNT(s) AS total
+        FROM Seat s
+        WHERE s.flightInstance.id IN :ids
+        GROUP BY s.flightInstance.id
+        """)
+    List<FlightInstanceCountProjection> countSeatsGroupedByFlightInstance(@Param("ids") List<Long> ids);
 }
