@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import com.aerolinea.flight_booking_api.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -39,4 +38,20 @@ public interface SeatReservationRepository extends JpaRepository<SeatReservation
             """)
     long countOccupiedSeats(@Param("flightInstanceId") Long flightInstanceId,
                             @Param("statuses") List<SeatReservationStatus> statuses);
+
+    @Query("""
+            SELECT sr FROM SeatReservation sr
+            WHERE sr.flightSegment.itinerary.reservation.id = :reservationId
+              AND sr.status = 'HELD' and sr.heldUntil < :threshold
+            """)
+    List<SeatReservation> findHeldSeatsByReservationId( @Param("reservationId") Long reservationId, @Param("threshold") LocalDateTime threshold);
+
+    @Query("""
+            SELECT COUNT(sr)
+            FROM SeatReservation sr
+            WHERE sr.flightSegment.itinerary.reservation.id = :reservationId
+              AND sr.status IN ('CONFIRMED', 'HELD')
+        """)
+    Long countReservationWithHoldOrConfirmedSeats(@Param("reservationId") Long reservationId);
+
 }
