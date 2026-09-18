@@ -1,21 +1,20 @@
 package com.aerolinea.flight_booking_api.domain.flight;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
-import com.aerolinea.flight_booking_api.dtos.booking.BookingRequest;
-import com.aerolinea.flight_booking_api.services.BookingService;
+import com.aerolinea.flight_booking_api.dtos.flight.FlightSearchResultDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -24,11 +23,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import com.aerolinea.flight_booking_api.config.AbstractIntegrationTest;
 import com.aerolinea.flight_booking_api.dtos.FlightSearchCriteria;
-import com.aerolinea.flight_booking_api.dtos.ReservationRequest;
+import com.aerolinea.flight_booking_api.dtos.booking.BookingRequest;
 import com.aerolinea.flight_booking_api.models.AircraftLayout;
 import com.aerolinea.flight_booking_api.models.AircraftModel;
 import com.aerolinea.flight_booking_api.models.Airport;
-import com.aerolinea.flight_booking_api.models.Flight;
 import com.aerolinea.flight_booking_api.models.FlightInstance;
 import com.aerolinea.flight_booking_api.models.FlightSchedule;
 import com.aerolinea.flight_booking_api.models.User;
@@ -36,12 +34,11 @@ import com.aerolinea.flight_booking_api.repositories.AircraftLayoutRepository;
 import com.aerolinea.flight_booking_api.repositories.AircraftModelRepository;
 import com.aerolinea.flight_booking_api.repositories.AirportRepository;
 import com.aerolinea.flight_booking_api.repositories.FlightInstanceRepository;
-import com.aerolinea.flight_booking_api.repositories.FlightRepository;
 import com.aerolinea.flight_booking_api.repositories.FlightScheduleRepository;
 import com.aerolinea.flight_booking_api.repositories.SeatRepository;
 import com.aerolinea.flight_booking_api.repositories.UserRepository;
+import com.aerolinea.flight_booking_api.services.BookingService;
 import com.aerolinea.flight_booking_api.services.FlightService;
-import com.aerolinea.flight_booking_api.services.ReservationService;
 import com.aerolinea.flight_booking_api.utils.factories.AircraftLayoutFactory;
 import com.aerolinea.flight_booking_api.utils.factories.AircraftModelFactory;
 import com.aerolinea.flight_booking_api.utils.factories.AirportFactory;
@@ -58,7 +55,7 @@ public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
     private BookingService bookingService;
 
     @MockitoSpyBean
-    private FlightRepository flightRepository;
+    private FlightInstanceRepository flightInstanceRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -74,9 +71,6 @@ public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private FlightScheduleRepository flightScheduleRepository;
-
-    @Autowired
-    private FlightInstanceRepository flightInstanceRepository;
 
     @Autowired
     private SeatRepository seatRepository;
@@ -122,28 +116,27 @@ public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
                 .build();
         userRepository.save(testUser);
 
-        Flight testFlight = Flight.builder()
-                .flightNumber("CACHE-999")
-                .departure("Londres")
-                .departureTime(LocalDateTime.now().plusDays(5))
-                .destination("Budapest")
-                .destinationTime(LocalDateTime.now().plusDays(5).plusHours(12))
-                .availableSeats(10)
-                .price(new BigDecimal("500.00"))
-                .build();
-
-        flightRepository.save(testFlight);
-
         FlightInstance bookableInstance = persistBookableFlightInstance();
 
-        FlightSearchCriteria criteria = new FlightSearchCriteria("Londres", "Budapest", null, null, null, null);
+        FlightSearchCriteria criteria = new FlightSearchCriteria("MAD", "JFK", null, null, null, null);
         Pageable pageable = PageRequest.of(0, 10);
 
-        flightService.searchFlights(criteria, pageable);
-        verify(flightRepository, times(1)).findAll(org.mockito.ArgumentMatchers.<Specification<Flight>>any(), eq(pageable));
+        Page<FlightSearchResultDTO> firstSearch = flightService.searchFlights(criteria, pageable);
+
+        assertThat(firstSearch.getContent())
+                .as("the materialised flight must be searchable")
+                .isNotEmpty();
+        assertThat(firstSearch.getContent().get(0).availableSeats())
+                .as("availability is derived from the materialised seats")
+                .isEqualTo(15);
+
+        verify(flightInstanceRepository, times(1))
+                .findAll(org.mockito.ArgumentMatchers.<Specification<FlightInstance>>any(), eq(pageable));
 
         flightService.searchFlights(criteria, pageable);
-        verify(flightRepository, times(1)).findAll(org.mockito.ArgumentMatchers.<Specification<Flight>>any(), eq(pageable));
+
+        verify(flightInstanceRepository, times(1))
+                .findAll(org.mockito.ArgumentMatchers.<Specification<FlightInstance>>any(), eq(pageable));
 
         Long validSeatId = seatRepository.findAll().stream()
                 .filter(seat -> seat.getFlightInstance().getId().equals(bookableInstance.getId()))
@@ -158,8 +151,14 @@ public class FlightCacheIntegrationTest extends AbstractIntegrationTest {
         ));
         bookingService.createBooking(request);
 
-        flightService.searchFlights(criteria, pageable);
-        verify(flightRepository, times(2)).findAll(org.mockito.ArgumentMatchers.<Specification<Flight>>any(), eq(pageable));
+        Page<FlightSearchResultDTO> afterBooking = flightService.searchFlights(criteria, pageable);
+
+        verify(flightInstanceRepository, times(2))
+                .findAll(org.mockito.ArgumentMatchers.<Specification<FlightInstance>>any(), eq(pageable));
+
+        assertThat(afterBooking.getContent().get(0).availableSeats())
+                .as("the booked seat must no longer count as available")
+                .isEqualTo(14);
     }
 
 }

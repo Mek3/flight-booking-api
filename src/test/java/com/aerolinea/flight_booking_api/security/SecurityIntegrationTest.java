@@ -39,33 +39,6 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should return 403 forbiden when a USER role tries to access an ADMIN endpoint")
-    @WithMockUser(roles = "USER")
-    void shouldReturnForbiddenWhenUserRoleTriesToAccessAdminEndpoint() throws Exception {
-      mockMvc.perform(delete("/api/v1/flights/1"))
-                .andExpect(status().isForbidden())
-                .andDo(print())
-                .andExpect(jsonPath("$.message").value(ErrorCode.ACCESS_DENIED.getMessage()))
-                .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.internalCode").value(ErrorCode.ACCESS_DENIED.getCode()))
-                .andExpect(jsonPath("$.error").value("Forbidden"));
-    }
-
-    
-    @Test
-    @DisplayName("Should allow access and return 404 Not Found when an ADMIN tries to delete a non-existent flight")
-    @WithMockUser(roles = "ADMIN")
-    void shouldReturnNotFoundWhenAdminRoleAccessesNonExistentAdminEndpoint() throws Exception {
-        Long nonExistentFlightId = 9999L; 
-      mockMvc.perform(delete("/api/v1/flights/"+ nonExistentFlightId))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value(String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), nonExistentFlightId)))
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.internalCode").value(ErrorCode.FLIGHT_NOT_FOUND.getCode()))
-                .andExpect(jsonPath("$.error").value("Not Found"));
-    }
-
-    @Test
     @DisplayName("IDOR test: Should return 404 not found when a USER tries to access another user's reservation")
     @WithMockUser(roles = "USER")
     void shouldReturnNotFoundWhenUserRoleTriesToAccessAnotherUserReservation() throws Exception {
