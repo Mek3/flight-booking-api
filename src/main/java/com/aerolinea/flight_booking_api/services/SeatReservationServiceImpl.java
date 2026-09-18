@@ -132,4 +132,23 @@ public class SeatReservationServiceImpl implements SeatReservationService {
         log.debug("Created {} seat holds for reservation {}, expiring at {}",
                 holds.size(), reservation.getReservationCode(), heldUntil);
     }
+
+    @Override
+    @Transactional
+    public void cancelSeatReservationsForReservation(Long idReservation) {
+        List<SeatReservation> reservations = seatReservationRepository.findHeldSeatsByReservationId(idReservation, LocalDateTime.now());
+        reservations.forEach(SeatReservation::expire);
+        seatReservationRepository.saveAll(reservations);
+
+        log.debug("Cancelled {} seat reservations for reservation {}", reservations.size(), idReservation);
+    }
+
+    @Override
+    public void confirmSeatReservationsForReservation(Long idReservation) {
+        List<SeatReservation> reservations = seatReservationRepository.findHoldsByReservationId(idReservation);
+        reservations.forEach(SeatReservation::confirm);
+        seatReservationRepository.saveAll(reservations);
+
+        log.debug("Confirmed {} seat reservations for reservation {}", reservations.size(), idReservation);
+    }
 }

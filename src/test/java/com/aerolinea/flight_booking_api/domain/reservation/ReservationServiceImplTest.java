@@ -9,6 +9,7 @@ import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
 import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
 import com.aerolinea.flight_booking_api.services.ReservationServiceImpl;
 
+import com.aerolinea.flight_booking_api.services.SeatReservationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +39,9 @@ class ReservationServiceImplTest {
 
     @Mock
     private ReservationRepository reservationRepository;
+
+    @Mock
+    private SeatReservationService seatReservationService;
 
     @Mock
     private ReservationMapper reservationMapper;

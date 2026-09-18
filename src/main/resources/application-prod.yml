@@ -14,4 +14,5 @@ app:
   jwt:
     secret: ${JWT_SECRET_PROD}
   scheduling:
-    reservation-cleanup-delay: 120000
+    reservation-cleanup:
+      delay: 60000
