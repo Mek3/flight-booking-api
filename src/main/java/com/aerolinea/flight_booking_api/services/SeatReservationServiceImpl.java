@@ -145,7 +145,7 @@ public class SeatReservationServiceImpl implements SeatReservationService {
 
     @Override
     public void confirmSeatReservationsForReservation(Long idReservation) {
-        List<SeatReservation> reservations = seatReservationRepository.findHeldSeatsByReservationId(idReservation, LocalDateTime.now());
+        List<SeatReservation> reservations = seatReservationRepository.findHoldsByReservationId(idReservation);
         reservations.forEach(SeatReservation::confirm);
         seatReservationRepository.saveAll(reservations);
 
