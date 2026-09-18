@@ -163,44 +163,7 @@ flowchart TD
 concurrency fails before a single lock is taken, so locks are held for as little
 time as possible. And because the graph is assembled in memory, a rejected
 booking leaves nothing behind — the guarantee does not depend on a rollback.
-## 🏆 Three parts with tests
 
-**Idempotent seat generation**
-
-A `@DataJpaTest` runs the bulk seat insert two times against a real MySQL instance. Then it checks that the number of seats is the same. So the test proves idempotency in the database, not only in the code.
-→ `SeatRepositoryJpaTest.java`
-
-**Routing rules without the framework**
-
-The validation of times, airports and layovers works on a plain Java record. It does not work on JPA entities.
-
-Because of this, I can test all the rules without a Spring context and without a database. There are sixteen test cases and they run in milliseconds. Two examples: a layover exactly on the minimum connection time, and a flight that crosses midnight.
-→ `RoutingValidatorTest.java`
-
-**A unique constraint that works with soft deletes**
-
-Seat reservations have a `UNIQUE` index on a generated column. This column is `NULL` when the seat is released. MySQL does not see two `NULL` values as a collision.
-
-So when a hold expires, the seat is free for a new reservation, but the old row stays in the table as history.
-
-The obvious solution, a constraint on `(seat, segment)`, does not work. Two bookings on the same flight create two different segment rows. So that constraint would allow selling the same seat two times.
-→ `V*__add_seat_reservation.sql`
-
----
-
-## Design decisions
-
-**Calculate, do not store.** I do not save seat availability, layover times or total travel time in the database. I calculate them from the flight data. Nothing becomes old, because nothing is duplicated. If a flight is delayed, every calculated value is correct.
-
-**The database also protects the data.** Every idempotency and uniqueness rule has a database constraint, not only application code. I use `INSERT IGNORE` with a unique index for the seats, a generated `active_flag` for flight instances, and ShedLock for the scheduled jobs. If somebody skips the application code, or if a lock fails, the data is still correct.
-
-**Business rules are separate from the framework.** The routing validator receives a record and returns a result. It knows nothing about JPA, Spring or repositories. This is why its tests do not need them.
-
-**All errors have the same format.** Security errors happen in the filter chain, before the `DispatcherServlet`. So `@RestControllerAdvice` cannot catch them.
-
-I added a custom entry point for 401 errors and an access denied handler for 403 errors. Both use the same responder and the same `ObjectMapper` as the controllers. The client cannot see from the response if the error comes from a filter or from a controller.
-
----
 
 ## Seat hold lifecycle
 
@@ -243,6 +206,47 @@ therefore allows one active reservation per seat, and — because MySQL does not
 resolves: a hold confirmed moments before the sweep runs is no longer `HELD`, so the
 sweep does not match it, and the state machine would refuse the transition even if it
 did.
+
+---
+
+## 🏆 Three parts with tests
+
+**Idempotent seat generation**
+
+A `@DataJpaTest` runs the bulk seat insert two times against a real MySQL instance. Then it checks that the number of seats is the same. So the test proves idempotency in the database, not only in the code.
+→ `SeatRepositoryJpaTest.java`
+
+**Routing rules without the framework**
+
+The validation of times, airports and layovers works on a plain Java record. It does not work on JPA entities.
+
+Because of this, I can test all the rules without a Spring context and without a database. There are sixteen test cases and they run in milliseconds. Two examples: a layover exactly on the minimum connection time, and a flight that crosses midnight.
+→ `RoutingValidatorTest.java`
+
+**A unique constraint that works with soft deletes**
+
+Seat reservations have a `UNIQUE` index on a generated column. This column is `NULL` when the seat is released. MySQL does not see two `NULL` values as a collision.
+
+So when a hold expires, the seat is free for a new reservation, but the old row stays in the table as history.
+
+The obvious solution, a constraint on `(seat, segment)`, does not work. Two bookings on the same flight create two different segment rows. So that constraint would allow selling the same seat two times.
+→ `V*__add_seat_reservation.sql`
+
+---
+
+## Design decisions
+
+**Calculate, do not store.** I do not save seat availability, layover times or total travel time in the database. I calculate them from the flight data. Nothing becomes old, because nothing is duplicated. If a flight is delayed, every calculated value is correct.
+
+**The database also protects the data.** Every idempotency and uniqueness rule has a database constraint, not only application code. I use `INSERT IGNORE` with a unique index for the seats, a generated `active_flag` for flight instances, and ShedLock for the scheduled jobs. If somebody skips the application code, or if a lock fails, the data is still correct.
+
+**Business rules are separate from the framework.** The routing validator receives a record and returns a result. It knows nothing about JPA, Spring or repositories. This is why its tests do not need them.
+
+**All errors have the same format.** Security errors happen in the filter chain, before the `DispatcherServlet`. So `@RestControllerAdvice` cannot catch them.
+
+I added a custom entry point for 401 errors and an access denied handler for 403 errors. Both use the same responder and the same `ObjectMapper` as the controllers. The client cannot see from the response if the error comes from a filter or from a controller.
+
+---
 
 ## 🗺️ Roadmap
 
