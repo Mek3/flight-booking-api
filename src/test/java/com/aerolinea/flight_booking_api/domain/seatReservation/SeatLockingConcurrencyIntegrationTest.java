@@ -1,12 +1,14 @@
 package com.aerolinea.flight_booking_api.domain.seatReservation;
 
 import com.aerolinea.flight_booking_api.config.AbstractIntegrationTest;
+import com.aerolinea.flight_booking_api.dtos.booking.BookingDTO;
 import com.aerolinea.flight_booking_api.dtos.booking.BookingRequest;
 import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationException;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.models.*;
 import com.aerolinea.flight_booking_api.repositories.*;
 import com.aerolinea.flight_booking_api.services.BookingService;
+import com.aerolinea.flight_booking_api.services.ReservationService;
 import com.aerolinea.flight_booking_api.utils.factories.AircraftLayoutFactory;
 import com.aerolinea.flight_booking_api.utils.factories.AircraftModelFactory;
 import com.aerolinea.flight_booking_api.utils.factories.AirportFactory;
@@ -29,6 +31,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -38,13 +41,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
 @TestPropertySource(properties = {
         "spring.datasource.hikari.maximum-pool-size=30",
-        "spring.jpa.show-sql=false"
+        "logging.level.org.hibernate.SQL=debug",
+        "logging.level.org.hibernate.orm.jdbc.bind=trace",
+        "app.scheduling.reservation-cleanup.delay=86400000"
 })
 class SeatLockingConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
@@ -52,6 +56,9 @@ class SeatLockingConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private BookingService bookingService;
+
+    @Autowired
+    private ReservationService reservationService;
 
     @Autowired
     private UserRepository userRepository;
@@ -72,7 +79,13 @@ class SeatLockingConcurrencyIntegrationTest extends AbstractIntegrationTest {
     private FlightInstanceRepository flightInstanceRepository;
 
     @Autowired
+    private SeatReservationRepository seatReservationRepository;
+
+    @Autowired
     private SeatRepository seatRepository;
+
+    @Autowired
+    private ReservationRepository reservationRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -332,5 +345,139 @@ class SeatLockingConcurrencyIntegrationTest extends AbstractIntegrationTest {
         assertThat(countHoldsForSeat(contestedSeat))
                 .as("a rejected booking must leave no hold behind")
                 .isZero();
+    }
+
+    private Long bookSeatAs(String username, Long seatId) {
+        authenticateAs(username);
+        BookingDTO booking = bookingService.createBooking(bookingFor(List.of(seatId)));
+        SecurityContextHolder.clearContext();
+        return booking.id();
+    }
+
+    private void forceHoldsToExpire(Long reservationId) {
+        int updated = jdbcTemplate.update("""
+                UPDATE seat_reservations sr
+                JOIN flight_segments fs ON fs.id = sr.flight_segment_id
+                JOIN itineraries i ON i.id = fs.itinerary_id
+                SET sr.held_until = DATE_SUB(NOW(), INTERVAL 1 DAY)
+                WHERE i.reservation_id = ?
+                """, reservationId);
+
+        assertThat(updated)
+                .as("the fixture must move at least one hold into the past")
+                .isPositive();
+    }
+
+    private String reservationStatusOf(Long reservationId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT status FROM reservations WHERE id = ?", String.class, reservationId);
+    }
+
+    private String holdStatusForSeat(Long seatId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT status FROM seat_reservations WHERE seat_id = ? ORDER BY id DESC LIMIT 1",
+                String.class, seatId);
+    }
+
+    private long countHoldRowsForSeat(Long seatId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM seat_reservations WHERE seat_id = ?", Long.class, seatId);
+    }
+
+    @Test
+    @DisplayName("An expired hold must make its seat bookable again straight away")
+    void shouldReleaseSeatAfterExpiry() {
+        Long seatId = seatIds.get(0);
+
+        Long abandonedBooking = bookSeatAs("racer0", seatId);
+        forceHoldsToExpire(abandonedBooking);
+
+        reservationService.expirePendingReservations();
+
+        assertThat(holdStatusForSeat(seatId)).isEqualTo("EXPIRED");
+        assertThat(reservationStatusOf(abandonedBooking)).isEqualTo("EXPIRED");
+
+        authenticateAs("racer1");
+        assertThatCode(() -> bookingService.createBooking(bookingFor(List.of(seatId))))
+                .as("the released seat must be available to the next customer with no waiting")
+                .doesNotThrowAnyException();
+        SecurityContextHolder.clearContext();
+
+        assertThat(countHoldsForSeat(seatId))
+                .as("only the new hold may occupy the seat")
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("A reservation confirmed before the sweep must keep its seats")
+    void shouldNotExpireAConfirmedReservation() {
+        Long seatId = seatIds.get(0);
+
+        Long paidBooking = bookSeatAs("racer0", seatId);
+
+        authenticateAs("racer0");
+        reservationService.confirmReservation(paidBooking);
+        System.out.println("hold status after confirm: " + holdStatusForSeat(seatId));
+        SecurityContextHolder.clearContext();
+
+
+        forceHoldsToExpire(paidBooking);
+
+        reservationService.expirePendingReservations();
+
+        assertThat(holdStatusForSeat(seatId))
+                .as("a paid seat must survive its own TTL")
+                .isEqualTo("CONFIRMED");
+        assertThat(reservationStatusOf(paidBooking)).isEqualTo("CONFIRMED");
+
+        authenticateAs("racer1");
+        assertThatThrownBy(() -> bookingService.createBooking(bookingFor(List.of(seatId))))
+                .as("a confirmed seat must stay unavailable")
+                .isInstanceOf(BusinessRuleViolationException.class);
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    @DisplayName("Two sweeps running at once must not process the same reservation twice")
+    void shouldBeIdempotentUnderConcurrentSweeps() throws InterruptedException {
+        Long seatId = seatIds.get(0);
+
+        Long abandonedBooking = bookSeatAs("racer0", seatId);
+        forceHoldsToExpire(abandonedBooking);
+
+        CountDownLatch startLine = new CountDownLatch(1);
+        CountDownLatch finishLine = new CountDownLatch(2);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+
+        List<Throwable> unexpected = Collections.synchronizedList(new ArrayList<>());
+
+        for (int i = 0; i < 2; i++) {
+            pool.submit(() -> {
+                try {
+                    startLine.await();
+                    reservationService.expirePendingReservations();
+                } catch (Throwable e) {
+                    unexpected.add(e);
+                } finally {
+                    finishLine.countDown();
+                }
+            });
+        }
+
+        startLine.countDown();
+        boolean allFinished = finishLine.await(30, TimeUnit.SECONDS);
+        pool.shutdown();
+
+        assertThat(allFinished).isTrue();
+        assertThat(unexpected)
+                .as("a concurrent sweep must not raise, even when it finds the work already done")
+                .isEmpty();
+
+        assertThat(holdStatusForSeat(seatId)).isEqualTo("EXPIRED");
+        assertThat(reservationStatusOf(abandonedBooking)).isEqualTo("EXPIRED");
+
+        assertThat(countHoldRowsForSeat(seatId))
+                .as("the sweep must not duplicate hold rows")
+                .isEqualTo(1L);
     }
 }
