@@ -54,4 +54,11 @@ public interface SeatReservationRepository extends JpaRepository<SeatReservation
         """)
     Long countReservationWithHoldOrConfirmedSeats(@Param("reservationId") Long reservationId);
 
+    @Query("""
+        SELECT sr FROM SeatReservation sr
+        WHERE sr.flightSegment.itinerary.reservation.id = :reservationId
+          AND sr.status = 'HELD'
+        """)
+    List<SeatReservation> findHoldsByReservationId(@Param("reservationId") Long reservationId);
+
 }

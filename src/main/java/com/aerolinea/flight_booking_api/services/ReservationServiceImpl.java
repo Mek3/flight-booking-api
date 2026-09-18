@@ -23,7 +23,6 @@ import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
 import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
 import com.aerolinea.flight_booking_api.models.Itinerary;
 import com.aerolinea.flight_booking_api.models.Reservation;
-import com.aerolinea.flight_booking_api.models.ReservationStatus;
 import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -123,6 +122,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional
     @CacheEvict(value = "flightSearchCache", allEntries = true)
     public void confirmReservation(Long id) {
         String username = getAuthenticator().getName();
@@ -140,7 +140,7 @@ public class ReservationServiceImpl implements ReservationService {
     public void expirePendingReservations() {
 
         List<Long> expiredReservationIds = reservationRepository.findExpiredReservationIds(
-                 LocalDateTime.now().minusHours(15));
+                 LocalDateTime.now());
 
         if (expiredReservationIds.isEmpty()) {
             return;
@@ -179,7 +179,7 @@ public class ReservationServiceImpl implements ReservationService {
 
         reservation.expireReservation();
 
-        log.debug("Reservation {} expired, releasing its held seats", reservation.getReservationCode());
+        log.warn("Reservation {} expired, releasing its held seats", reservation.getReservationCode());
     }
 
 }
