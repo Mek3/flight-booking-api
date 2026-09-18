@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import com.aerolinea.flight_booking_api.repositories.projections.FlightInstanceCountProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -60,5 +61,15 @@ public interface SeatReservationRepository extends JpaRepository<SeatReservation
           AND sr.status = 'HELD'
         """)
     List<SeatReservation> findHoldsByReservationId(@Param("reservationId") Long reservationId);
+
+    @Query("""
+        SELECT sr.seat.flightInstance.id AS flightInstanceId, COUNT(sr) AS total
+        FROM SeatReservation sr
+        WHERE sr.seat.flightInstance.id IN :ids
+          AND sr.status IN :statuses
+        GROUP BY sr.seat.flightInstance.id
+        """)
+    List<FlightInstanceCountProjection> countOccupiedGroupedByFlightInstance(@Param("ids") List<Long> ids,
+                                                                             @Param("statuses") List<SeatReservationStatus> statuses);
 
 }
