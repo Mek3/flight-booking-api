@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.aerolinea.flight_booking_api.repositories.SeatReservationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.annotation.Lazy;
@@ -22,7 +23,6 @@ import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
 import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
 import com.aerolinea.flight_booking_api.models.Itinerary;
 import com.aerolinea.flight_booking_api.models.Reservation;
-import com.aerolinea.flight_booking_api.models.ReservationStatus;
 import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -35,6 +35,8 @@ public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final ReservationMapper reservationMapper;
+    private final SeatReservationRepository seatReservationRepository;
+    private final SeatReservationService seatReservationService;
 
     @Autowired
     @Lazy
@@ -120,12 +122,15 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional
     @CacheEvict(value = "flightSearchCache", allEntries = true)
     public void confirmReservation(Long id) {
         String username = getAuthenticator().getName();
         Reservation reservation = reservationRepository.findByIdAndUserUsername(id, username)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND,
                         String.format(ErrorCode.RESERVATION_NOT_FOUND.getMessage(), id)));
+
+        seatReservationService.confirmSeatReservationsForReservation(id);
         reservation.confirmReservation();
         reservationRepository.save(reservation);
         log.info("Reservation successfully confirmed ID: {}", id);
@@ -135,7 +140,7 @@ public class ReservationServiceImpl implements ReservationService {
     public void expirePendingReservations() {
 
         List<Long> expiredReservationIds = reservationRepository.findExpiredReservationIds(
-                ReservationStatus.PENDING, LocalDateTime.now().minusHours(15));
+                 LocalDateTime.now());
 
         if (expiredReservationIds.isEmpty()) {
             return;
@@ -161,13 +166,20 @@ public class ReservationServiceImpl implements ReservationService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void processSingleExpiration(Long idReservation) {
 
+        seatReservationService.cancelSeatReservationsForReservation(idReservation);
+
+        if(seatReservationRepository.countReservationWithHoldOrConfirmedSeats(idReservation) > 0) {
+            log.warn("Reservation {} has held or confirmed seats. Skipping expiration.", idReservation);
+            return;
+        }
+
         Reservation reservation = reservationRepository.findById(idReservation)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND,
                         String.format(ErrorCode.RESERVATION_NOT_FOUND.getMessage(), idReservation)));
 
         reservation.expireReservation();
 
-        log.debug("Reservation {} expired, releasing its held seats", reservation.getReservationCode());
+        log.warn("Reservation {} expired, releasing its held seats", reservation.getReservationCode());
     }
 
 }

@@ -17,7 +17,10 @@ app:
     maximum-layover-time: 24h
     maximum-segments: 4
   scheduling:
-    reservation-cleanup-delay: 60000
+    reservation-cleanup:
+      delay: 3600000
+      lock-at-least-for: 0s
+      lock-at-most-for: 10s
     flight-generation:
       cron: "0 0 2 * * *"
       lock-at-least-for: "5m"
