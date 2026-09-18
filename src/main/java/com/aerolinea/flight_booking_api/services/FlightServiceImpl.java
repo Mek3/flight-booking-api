@@ -1,79 +1,94 @@
 package com.aerolinea.flight_booking_api.services;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.aerolinea.flight_booking_api.dtos.flight.FlightSearchResultDTO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.aerolinea.flight_booking_api.config.RestPageImpl;
-import com.aerolinea.flight_booking_api.dtos.FlightDTO;
 import com.aerolinea.flight_booking_api.dtos.FlightSearchCriteria;
-import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
-import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
-import com.aerolinea.flight_booking_api.mappers.FlightMapper;
-import com.aerolinea.flight_booking_api.models.Flight;
-import com.aerolinea.flight_booking_api.repositories.FlightRepository;
-import com.aerolinea.flight_booking_api.specifications.FlightSpecification;
+import com.aerolinea.flight_booking_api.models.FlightInstance;
+import com.aerolinea.flight_booking_api.models.enums.SeatReservationStatus;
+import com.aerolinea.flight_booking_api.repositories.FlightInstanceRepository;
+import com.aerolinea.flight_booking_api.repositories.SeatRepository;
+import com.aerolinea.flight_booking_api.repositories.SeatReservationRepository;
+import com.aerolinea.flight_booking_api.specifications.FlightInstanceSpecification;
 
 import lombok.AllArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class FlightServiceImpl implements FlightService {
 
-    private final FlightRepository flightRepository;
-    private final FlightMapper flightMapper;
+    private static final List<SeatReservationStatus> OCCUPYING_STATUSES =
+            List.of(SeatReservationStatus.HELD, SeatReservationStatus.CONFIRMED);
+
+    private final FlightInstanceRepository flightInstanceRepository;
+    private final SeatRepository seatRepository;
+    private final SeatReservationRepository seatReservationRepository;
 
     @Override
-    public FlightDTO save(FlightDTO flightDTO) {
-        return flightMapper.toFlightDTO(flightRepository.save(flightMapper.toFlight(flightDTO)));
-    }
-
-    @Override
-    public FlightDTO updateFlight(Long id, FlightDTO flightDTO) {
-        Flight existingFlight = flightRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
-                        String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), id)));
-
-        flightMapper.updateFlightFromDTO(flightDTO, existingFlight);
-
-        return flightMapper.toFlightDTO(flightRepository.save(existingFlight));
-    }
-
-    @Override
-    public FlightDTO flightById(Long id) {
-        return flightMapper.toFlightDTO(flightRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
-                        String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), id))));
-    }
-
-    @Override
-    public Page<FlightDTO> getFlights(Pageable pageable) {
-        return flightRepository.findAll(pageable).map(flightMapper::toFlightDTO);
-    }
-
-    @Override
-    public void deleteFlightById(Long id) {
-        if (!flightRepository.existsById(id)) {
-            throw new ResourceNotFoundException(ErrorCode.FLIGHT_NOT_FOUND,
-                    String.format(ErrorCode.FLIGHT_NOT_FOUND.getMessage(), id));
-        }
-        flightRepository.deleteById(id);
-    }
-    
-    @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "flightSearchCache", keyGenerator = "flightSearchKeyGenerator")
-    public Page<FlightDTO> searchFlights(FlightSearchCriteria flightSearchCriteria, Pageable pageable) {
-       Page<FlightDTO> dtoPage= flightRepository.findAll(
-                FlightSpecification.hasDeparture(flightSearchCriteria.departure())
-                        .and(FlightSpecification.hasDestination(flightSearchCriteria.destination()))
-                        .and(FlightSpecification.hasPriceGreaterThanOrEqualTo(flightSearchCriteria.minPrice()))
-                        .and(FlightSpecification.hasPriceLessThanOrEqualTo(flightSearchCriteria.maxPrice()))
-                        .and(FlightSpecification.hasMinimumAvailableSeats(flightSearchCriteria.minAvailableSeats()))
-                        .and(FlightSpecification.departsOnDate(flightSearchCriteria.date())),
-                pageable
-        ).map(flightMapper::toFlightDTO);
+    public Page<FlightSearchResultDTO> searchFlights(FlightSearchCriteria criteria, Pageable pageable) {
 
-        return new RestPageImpl<FlightDTO>(dtoPage.getContent(), pageable.getPageNumber(), pageable.getPageSize(), dtoPage.getTotalElements());
+        Page<FlightInstance> instancePage = flightInstanceRepository.findAll(
+                FlightInstanceSpecification.hasDeparture(criteria.departure())
+                        .and(FlightInstanceSpecification.hasDestination(criteria.destination()))
+                        .and(FlightInstanceSpecification.hasPriceGreaterThanOrEqualTo(criteria.minPrice()))
+                        .and(FlightInstanceSpecification.hasPriceLessThanOrEqualTo(criteria.maxPrice()))
+                        .and(FlightInstanceSpecification.hasMinimumAvailableSeats(criteria.minAvailableSeats()))
+                        .and(FlightInstanceSpecification.departsOnDate(criteria.date())),
+                pageable);
+
+        Map<Long, Long> availability = resolveAvailability(instancePage.getContent());
+
+        List<FlightSearchResultDTO> content = instancePage.getContent().stream()
+                .map(instance -> toSearchResult(instance, availability.getOrDefault(instance.getId(), 0L)))
+                .toList();
+
+        return new RestPageImpl<>(content, pageable.getPageNumber(), pageable.getPageSize(),
+                instancePage.getTotalElements());
+    }
+
+    private Map<Long, Long> resolveAvailability(List<FlightInstance> instances) {
+        if (instances.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> ids = instances.stream().map(FlightInstance::getId).toList();
+
+        Map<Long, Long> capacity = new HashMap<>();
+        seatRepository.countSeatsGroupedByFlightInstance(ids)
+                .forEach(row -> capacity.put(row.getFlightInstanceId(), row.getTotal()));
+
+        Map<Long, Long> occupied = new HashMap<>();
+        seatReservationRepository.countOccupiedGroupedByFlightInstance(ids, OCCUPYING_STATUSES)
+                .forEach(row -> occupied.put(row.getFlightInstanceId(), row.getTotal()));
+
+        Map<Long, Long> available = new HashMap<>();
+        ids.forEach(id -> available.put(id,
+                capacity.getOrDefault(id, 0L) - occupied.getOrDefault(id, 0L)));
+
+        return available;
+    }
+
+    private FlightSearchResultDTO toSearchResult(FlightInstance instance, long availableSeats) {
+        return new FlightSearchResultDTO(
+                instance.getId(),
+                instance.getFlightSchedule().getFlightNumber(),
+                instance.getFlightSchedule().getDepartureAirport().getCode(),
+                instance.getDepartureAt(),
+                instance.getFlightSchedule().getArrivalAirport().getCode(),
+                instance.getArrivalAt(),
+                availableSeats,
+                instance.getFlightSchedule().getBasePrice());
     }
 }
