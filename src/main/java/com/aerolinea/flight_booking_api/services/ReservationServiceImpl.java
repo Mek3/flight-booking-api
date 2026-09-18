@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.aerolinea.flight_booking_api.repositories.SeatReservationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.annotation.Lazy;
@@ -35,6 +36,8 @@ public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final ReservationMapper reservationMapper;
+    private final SeatReservationRepository seatReservationRepository;
+    private final SeatReservationService seatReservationService;
 
     @Autowired
     @Lazy
@@ -126,6 +129,8 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation reservation = reservationRepository.findByIdAndUserUsername(id, username)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND,
                         String.format(ErrorCode.RESERVATION_NOT_FOUND.getMessage(), id)));
+
+        seatReservationService.confirmSeatReservationsForReservation(id);
         reservation.confirmReservation();
         reservationRepository.save(reservation);
         log.info("Reservation successfully confirmed ID: {}", id);
@@ -135,7 +140,7 @@ public class ReservationServiceImpl implements ReservationService {
     public void expirePendingReservations() {
 
         List<Long> expiredReservationIds = reservationRepository.findExpiredReservationIds(
-                ReservationStatus.PENDING, LocalDateTime.now().minusHours(15));
+                 LocalDateTime.now().minusHours(15));
 
         if (expiredReservationIds.isEmpty()) {
             return;
@@ -160,6 +165,13 @@ public class ReservationServiceImpl implements ReservationService {
     @CacheEvict(value = "flightSearchCache", allEntries = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void processSingleExpiration(Long idReservation) {
+
+        seatReservationService.cancelSeatReservationsForReservation(idReservation);
+
+        if(seatReservationRepository.countReservationWithHoldOrConfirmedSeats(idReservation) > 0) {
+            log.warn("Reservation {} has held or confirmed seats. Skipping expiration.", idReservation);
+            return;
+        }
 
         Reservation reservation = reservationRepository.findById(idReservation)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND,

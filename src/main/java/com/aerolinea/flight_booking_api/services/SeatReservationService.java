@@ -15,4 +15,8 @@ public interface SeatReservationService {
     List<Seat> acquireSeatLocksAndValidate(List<Long> seatIds);
 
     void createHoldsForReservation(Reservation reservation, List<Seat> lockedSeats);
+
+    void cancelSeatReservationsForReservation(Long idReservation);
+
+    void confirmSeatReservationsForReservation(Long idReservation);
 }
