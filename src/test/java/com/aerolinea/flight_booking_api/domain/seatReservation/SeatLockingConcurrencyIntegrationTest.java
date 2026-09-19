@@ -6,9 +6,11 @@ import com.aerolinea.flight_booking_api.dtos.booking.BookingRequest;
 import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationException;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.models.*;
+import com.aerolinea.flight_booking_api.models.enums.ReservationStatus;
 import com.aerolinea.flight_booking_api.repositories.*;
 import com.aerolinea.flight_booking_api.services.BookingService;
 import com.aerolinea.flight_booking_api.services.ReservationService;
+import com.aerolinea.flight_booking_api.services.SeatReservationService;
 import com.aerolinea.flight_booking_api.utils.factories.AircraftLayoutFactory;
 import com.aerolinea.flight_booking_api.utils.factories.AircraftModelFactory;
 import com.aerolinea.flight_booking_api.utils.factories.AirportFactory;
@@ -23,6 +25,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
@@ -31,7 +35,6 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -59,6 +62,12 @@ class SeatLockingConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private ReservationService reservationService;
+
+    @Autowired
+    private SeatReservationService seatReservationService;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     @Autowired
     private UserRepository userRepository;
@@ -90,11 +99,9 @@ class SeatLockingConcurrencyIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private TransactionTemplate transactionTemplate;
-
     private FlightInstance flightInstance;
     private List<Long> seatIds;
+
 
     @BeforeEach
     void setUp() {
@@ -394,8 +401,8 @@ class SeatLockingConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
         reservationService.expirePendingReservations();
 
-        assertThat(holdStatusForSeat(seatId)).isEqualTo("EXPIRED");
-        assertThat(reservationStatusOf(abandonedBooking)).isEqualTo("EXPIRED");
+        assertThat(holdStatusForSeat(seatId)).isEqualTo(ReservationStatus.EXPIRED.name());
+        assertThat(reservationStatusOf(abandonedBooking)).isEqualTo(ReservationStatus.EXPIRED.name());
 
         authenticateAs("racer1");
         assertThatCode(() -> bookingService.createBooking(bookingFor(List.of(seatId))))
@@ -427,8 +434,8 @@ class SeatLockingConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(holdStatusForSeat(seatId))
                 .as("a paid seat must survive its own TTL")
-                .isEqualTo("CONFIRMED");
-        assertThat(reservationStatusOf(paidBooking)).isEqualTo("CONFIRMED");
+                .isEqualTo(ReservationStatus.CONFIRMED.name());
+        assertThat(reservationStatusOf(paidBooking)).isEqualTo(ReservationStatus.CONFIRMED.name());
 
         authenticateAs("racer1");
         assertThatThrownBy(() -> bookingService.createBooking(bookingFor(List.of(seatId))))
@@ -473,11 +480,151 @@ class SeatLockingConcurrencyIntegrationTest extends AbstractIntegrationTest {
                 .as("a concurrent sweep must not raise, even when it finds the work already done")
                 .isEmpty();
 
-        assertThat(holdStatusForSeat(seatId)).isEqualTo("EXPIRED");
-        assertThat(reservationStatusOf(abandonedBooking)).isEqualTo("EXPIRED");
+        assertThat(holdStatusForSeat(seatId)).isEqualTo(ReservationStatus.EXPIRED.name());
+        assertThat(reservationStatusOf(abandonedBooking)).isEqualTo(ReservationStatus.EXPIRED.name());
 
         assertThat(countHoldRowsForSeat(seatId))
                 .as("the sweep must not duplicate hold rows")
                 .isEqualTo(1L);
     }
+
+    private Long holdIdForSeat(Long seatId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM seat_reservations WHERE seat_id = ? ORDER BY id DESC LIMIT 1",
+                Long.class, seatId);
+    }
+
+    private Long versionOfHold(Long holdId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT version FROM seat_reservations WHERE id = ?", Long.class, holdId);
+    }
+
+    @Test
+    @DisplayName("A hold confirmed between the sweep's read and its write must stay confirmed")
+    void shouldNotOverwriteAConfirmedHold() throws InterruptedException {
+        Long seatId = seatIds.get(0);
+        Long reservationId = bookSeatAs("racer0", seatId);
+        forceHoldsToExpire(reservationId);
+
+        CountDownLatch bothHaveRead = new CountDownLatch(2);
+        CountDownLatch mayWrite = new CountDownLatch(1);
+        CountDownLatch finished = new CountDownLatch(2);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+
+        AtomicInteger succeeded = new AtomicInteger();
+        AtomicInteger conflicted = new AtomicInteger();
+        List<Throwable> unexpected = Collections.synchronizedList(new ArrayList<>());
+
+        Runnable confirm = () -> runContending(
+                () -> {
+                    authenticateAs("racer0");
+                    reservationService.confirmReservation(reservationId);
+                },
+                bothHaveRead, mayWrite, finished, succeeded, conflicted, unexpected);
+
+        Runnable expire = () -> runContending(
+                () -> reservationService.expirePendingReservations(),
+                bothHaveRead, mayWrite, finished, succeeded, conflicted, unexpected);
+
+        pool.submit(confirm);
+        pool.submit(expire);
+
+        assertThat(bothHaveRead.await(20, TimeUnit.SECONDS))
+                .as("both transactions must be in flight before either writes")
+                .isTrue();
+        mayWrite.countDown();
+
+        assertThat(finished.await(30, TimeUnit.SECONDS)).isTrue();
+        pool.shutdown();
+
+        assertThat(unexpected)
+                .as("the only acceptable failure is an optimistic conflict")
+                .isEmpty();
+
+        String finalStatus = holdStatusForSeat(seatId);
+
+        assertThat(finalStatus)
+                .as("whichever transaction won, the hold must be in a terminal state")
+                .isIn(ReservationStatus.CONFIRMED.name(), ReservationStatus.EXPIRED.name());
+
+        assertThat(countHoldRowsForSeat(seatId))
+                .as("no transaction may duplicate the hold")
+                .isEqualTo(1L);
+
+        if (ReservationStatus.CONFIRMED.name().equals(finalStatus)) {
+            assertThat(reservationStatusOf(seatId == null ? null : reservationId))
+                    .as("a confirmed hold implies a confirmed reservation")
+                    .isEqualTo(ReservationStatus.CONFIRMED.name());
+        } else {
+            assertThat(reservationStatusOf(reservationId))
+                    .as("an expired hold implies an expired reservation")
+                    .isEqualTo(ReservationStatus.EXPIRED.name());
+        }
+    }
+
+    private void runContending(Runnable work,
+                               CountDownLatch bothHaveRead,
+                               CountDownLatch mayWrite,
+                               CountDownLatch finished,
+                               AtomicInteger succeeded,
+                               AtomicInteger conflicted,
+                               List<Throwable> unexpected) {
+        try {
+            bothHaveRead.countDown();
+            mayWrite.await(20, TimeUnit.SECONDS);
+            work.run();
+            succeeded.incrementAndGet();
+        } catch (BusinessRuleViolationException | OptimisticLockingFailureException | PessimisticLockingFailureException e) {
+            conflicted.incrementAndGet();
+        } catch (Throwable e) {
+            unexpected.add(e);
+        } finally {
+            SecurityContextHolder.clearContext();
+            finished.countDown();
+        }
+    }
+
+    @Test
+    @DisplayName("A stale hold must not overwrite a newer state")
+    void shouldRejectAWriteFromAStaleRead() {
+        Long seatId = seatIds.get(0);
+        Long reservationId = bookSeatAs("racer0", seatId);
+        Long holdId = holdIdForSeat(seatId);
+
+        Long versionBefore = versionOfHold(holdId);
+
+        authenticateAs("racer0");
+        reservationService.confirmReservation(reservationId);
+        SecurityContextHolder.clearContext();
+
+        assertThat(versionOfHold(holdId))
+                .as("confirming the hold must bump its version")
+                .isGreaterThan(versionBefore);
+
+        forceHoldsToExpire(reservationId);
+        reservationService.expirePendingReservations();
+
+        assertThat(holdStatusForSeat(seatId))
+                .as("a confirmed hold is terminal and the sweep must leave it alone")
+                .isEqualTo(ReservationStatus.CONFIRMED.name());
+    }
+
+    @Test
+    @DisplayName("A released seat must be bookable again by another customer")
+    void shouldFreeTheSeatAfterAConflictResolvesToExpired() {
+        Long seatId = seatIds.get(0);
+        Long abandoned = bookSeatAs("racer0", seatId);
+
+        forceHoldsToExpire(abandoned);
+        reservationService.expirePendingReservations();
+
+        assertThat(holdStatusForSeat(seatId)).isEqualTo(ReservationStatus.EXPIRED.name());
+
+        authenticateAs("racer1");
+        assertThatCode(() -> bookingService.createBooking(bookingFor(List.of(seatId))))
+                .as("the seat must be available immediately after the sweep")
+                .doesNotThrowAnyException();
+        SecurityContextHolder.clearContext();
+    }
+
 }

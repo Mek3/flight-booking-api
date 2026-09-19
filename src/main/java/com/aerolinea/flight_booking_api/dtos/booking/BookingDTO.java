@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.aerolinea.flight_booking_api.dtos.itinerary.ItineraryDTO;
-import com.aerolinea.flight_booking_api.models.ReservationStatus;
+import com.aerolinea.flight_booking_api.models.enums.ReservationStatus;
 
 public record BookingDTO(
         Long id,

@@ -3,11 +3,11 @@ package com.aerolinea.flight_booking_api.controllers;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
-import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -150,16 +150,16 @@ public class GlobalExceptionController {
     }
 
 
-    @ExceptionHandler({ObjectOptimisticLockingFailureException.class, CannotAcquireLockException.class})
+    @ExceptionHandler({OptimisticLockingFailureException.class, PessimisticLockingFailureException.class})
     public ResponseEntity<ApiError> handleConcurrencyFailure(Exception ex, WebRequest webRequest) {
         String path = webRequest.getDescription(false).replace("uri=", "");
-        
-        log.warn("Optimistic locking or concurrency conflict detected: {} for URI: {}", ex.getMessage(), path);
+
+        log.warn("Concurrency conflict on {}: {}", path, ex.getMessage());
 
         ApiError apiError = new ApiError(
                 LocalDateTime.now(),
                 HttpStatus.CONFLICT.value(),
-                ErrorCode.CONCURRENCY_CONFLICT.getCode(), 
+                ErrorCode.CONCURRENCY_CONFLICT.getCode(),
                 HttpStatus.CONFLICT.getReasonPhrase(),
                 ErrorCode.CONCURRENCY_CONFLICT.getMessage(),
                 path
@@ -168,7 +168,7 @@ public class GlobalExceptionController {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
     }
 
-    
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleException(Exception exception, WebRequest request){
         log.error("Unhandled exception caught in GlobalExceptionHandler", exception);

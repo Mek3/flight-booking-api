@@ -3,7 +3,7 @@ package com.aerolinea.flight_booking_api.dtos;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import com.aerolinea.flight_booking_api.models.ReservationStatus;
+import com.aerolinea.flight_booking_api.models.enums.ReservationStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

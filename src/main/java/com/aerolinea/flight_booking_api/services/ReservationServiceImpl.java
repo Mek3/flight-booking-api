@@ -8,6 +8,7 @@ import com.aerolinea.flight_booking_api.repositories.SeatReservationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -153,6 +154,10 @@ public class ReservationServiceImpl implements ReservationService {
             try {
                 reservationService.processSingleExpiration(idReservation);
                 successCount++;
+
+            } catch (OptimisticLockingFailureException e) {
+                log.info("Reservation {} was modified while expiring it; leaving it to whoever got there first",
+                        idReservation);
             } catch (Exception e) {
                 log.error("Failed to expire reservation ID: {}. Reason: {}", idReservation, e.getMessage());
             }

@@ -2,6 +2,7 @@ package com.aerolinea.flight_booking_api.models;
 
 import java.time.LocalDateTime;
 
+import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -9,18 +10,6 @@ import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationExceptio
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.models.enums.SeatReservationStatus;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,7 +24,7 @@ import lombok.Setter;
                 columnNames = {"seat_id", "occupied_flag"}
         )
 )
-@SQLDelete(sql = "UPDATE seat_reservations SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLDelete(sql = "UPDATE seat_reservations SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND version = ?")
 @SQLRestriction("deleted_at is NULL")
 @Getter
 @Setter
@@ -64,6 +53,10 @@ public class SeatReservation extends BaseEntity {
 
     @Column(name = "occupied_flag", insertable = false, updatable = false)
     private Boolean occupiedFlag;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     @Builder
     public SeatReservation(Seat seat, FlightSegment flightSegment, LocalDateTime heldUntil) {
