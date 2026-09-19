@@ -207,9 +207,26 @@ resolves: a hold confirmed moments before the sweep runs is no longer `HELD`, so
 sweep does not match it, and the state machine would refuse the transition even if it
 did.
 
+**A version column guards the transitions themselves.** The expiry sweep and payment
+confirmation are two independent transactions reading and writing the same row. Without
+a version, a payment committing between the sweep's `SELECT` and its `UPDATE` would be
+overwritten with `EXPIRED` — and the state machine would not catch it, because the entity
+the sweep holds still believes it is `HELD`.
+
 ---
 
-## 🏆 Three parts with tests
+## 🏆 Four parts with tests
+
+**Seat locking proven under concurrency**
+
+Twenty threads compete for the same seat and exactly one wins. Another test sends two transactions asking for the same seats in the opposite order and checks that neither deadlocks, because the seat ids are sorted before the locks are taken.
+
+These tests found two real bugs that a code review would not have caught.
+
+The first: the lock was working, but the availability check that came after it read the snapshot from the start of the transaction, because MySQL runs `REPEATABLE READ` by default. So the second transaction took the lock, saw a seat that was already held as free, and inserted. What actually stopped the overselling was the unique constraint, not the lock.
+
+The second: the lock timeout was never applied. MySQL has no per-statement timeout, so Hibernate dropped the value without any warning and the request waited the fifty second server default.
+→ `SeatLockingConcurrencyIntegrationTest.java`
 
 **Idempotent seat generation**
 
@@ -237,6 +254,12 @@ The obvious solution, a constraint on `(seat, segment)`, does not work. Two book
 ## Design decisions
 
 **Calculate, do not store.** I do not save seat availability, layover times or total travel time in the database. I calculate them from the flight data. Nothing becomes old, because nothing is duplicated. If a flight is delayed, every calculated value is correct.
+
+**Two locking strategies, chosen by the contention pattern.** Assigning a seat uses pessimistic locking: the transaction covers several seats on several aircraft, so a conflict found when writing the last one throws away all the work done before it. Preventing that conflict is worth waiting for.
+
+The state transitions of a hold use optimistic locking. The expiry job and a payment almost never collide, and when they do there is nothing to retry — one of them was simply too late. Blocking a thread for a conflict that rarely happens, and that has no recovery, gives nothing back.
+
+Neither is the right tool if the system assigns any free seat instead of the customer choosing one. That case wants `FOR UPDATE SKIP LOCKED`, so each process takes a different seat instead of competing for the same one.
 
 **The database also protects the data.** Every idempotency and uniqueness rule has a database constraint, not only application code. I use `INSERT IGNORE` with a unique index for the seats, a generated `active_flag` for flight instances, and ShedLock for the scheduled jobs. If somebody skips the application code, or if a lock fails, the data is still correct.
 
