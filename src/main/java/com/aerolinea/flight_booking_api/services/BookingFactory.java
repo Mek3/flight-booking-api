@@ -15,7 +15,7 @@ import com.aerolinea.flight_booking_api.models.FlightInstance;
 import com.aerolinea.flight_booking_api.models.FlightSegment;
 import com.aerolinea.flight_booking_api.models.Itinerary;
 import com.aerolinea.flight_booking_api.models.Reservation;
-import com.aerolinea.flight_booking_api.models.ReservationStatus;
+import com.aerolinea.flight_booking_api.models.enums.ReservationStatus;
 import com.aerolinea.flight_booking_api.models.User;
 
 @Component

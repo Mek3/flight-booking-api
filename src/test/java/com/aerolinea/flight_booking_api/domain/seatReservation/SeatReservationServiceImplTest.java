@@ -6,6 +6,7 @@ import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
 import com.aerolinea.flight_booking_api.models.*;
 import com.aerolinea.flight_booking_api.models.enums.FlightStatus;
+import com.aerolinea.flight_booking_api.models.enums.ReservationStatus;
 import com.aerolinea.flight_booking_api.models.enums.SeatReservationStatus;
 import com.aerolinea.flight_booking_api.repositories.SeatRepository;
 import com.aerolinea.flight_booking_api.repositories.SeatReservationRepository;

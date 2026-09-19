@@ -6,6 +6,7 @@ import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
 import com.aerolinea.flight_booking_api.models.*;
 import com.aerolinea.flight_booking_api.models.enums.FlightStatus;
 import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
+import com.aerolinea.flight_booking_api.models.enums.ReservationStatus;
 import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
 import com.aerolinea.flight_booking_api.services.ReservationServiceImpl;
 
