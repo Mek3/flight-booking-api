@@ -3,11 +3,12 @@ package com.aerolinea.flight_booking_api.domain.reservation;
 import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationException;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
+import com.aerolinea.flight_booking_api.mappers.BookingMapper;
 import com.aerolinea.flight_booking_api.models.*;
 import com.aerolinea.flight_booking_api.models.enums.FlightStatus;
-import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
 import com.aerolinea.flight_booking_api.models.enums.ReservationStatus;
 import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
+import com.aerolinea.flight_booking_api.repositories.SeatReservationRepository;
 import com.aerolinea.flight_booking_api.services.ReservationServiceImpl;
 
 import com.aerolinea.flight_booking_api.services.SeatReservationService;
@@ -45,7 +46,11 @@ class ReservationServiceImplTest {
     private SeatReservationService seatReservationService;
 
     @Mock
-    private ReservationMapper reservationMapper;
+    private BookingMapper bookingMapper;
+
+    @Mock
+    private SeatReservationRepository seatReservationRepository;
+
 
     @Mock
     private SecurityContext securityContext;

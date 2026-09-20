@@ -1,7 +1,8 @@
 package com.aerolinea.flight_booking_api.domain.reservation;
 
-import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
+import com.aerolinea.flight_booking_api.mappers.BookingMapper;
 import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
+import com.aerolinea.flight_booking_api.repositories.SeatReservationRepository;
 import com.aerolinea.flight_booking_api.services.ReservationService;
 import com.aerolinea.flight_booking_api.services.ReservationServiceImpl;
 import com.aerolinea.flight_booking_api.services.SeatReservationService;
@@ -23,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,10 +35,13 @@ class SweepConflictTest {
     private ReservationRepository reservationRepository;
 
     @Mock
-    private SeatReservationService seatReservationService;
+    private BookingMapper bookingMapper;
 
     @Mock
-    private ReservationMapper reservationMapper;
+    private SeatReservationRepository seatReservationRepository;
+
+    @Mock
+    private SeatReservationService seatReservationService;
 
     @Mock
     private ReservationService selfProxy;
@@ -88,6 +93,6 @@ class SweepConflictTest {
 
         reservationService.expirePendingReservations();
 
-        verify(selfProxy, org.mockito.Mockito.never()).processSingleExpiration(anyLong());
+        verify(selfProxy, never()).processSingleExpiration(anyLong());
     }
 }
