@@ -17,11 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.aerolinea.flight_booking_api.dtos.ReservationDTO;
+import com.aerolinea.flight_booking_api.dtos.booking.BookingDTO;
 import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationException;
 import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
-import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
+import com.aerolinea.flight_booking_api.mappers.BookingMapper;
 import com.aerolinea.flight_booking_api.models.Itinerary;
 import com.aerolinea.flight_booking_api.models.Reservation;
 import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
@@ -35,7 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
-    private final ReservationMapper reservationMapper;
+    private final BookingMapper bookingMapper;
     private final SeatReservationRepository seatReservationRepository;
     private final SeatReservationService seatReservationService;
 
@@ -95,31 +95,33 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    public ReservationDTO getReservationByIdAndUsername(Long idReservation) {
+    public BookingDTO getReservationByIdAndUsername(Long idReservation) {
         String username = getAuthenticator().getName();
-        return reservationMapper.toReservationDTO(
-                reservationRepository.findByIdAndUserUsername(idReservation, username)
+        return bookingMapper.toBookingDTO(
+                reservationRepository.findByIdWithItineraries(idReservation)
+                        .filter(reservation -> reservation.getUser() != null
+                                && reservation.getUser().getUsername().equals(username))
                         .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND,
                                 String.format(ErrorCode.RESERVATION_NOT_FOUND.getMessage(), idReservation))));
     }
 
     @Override
-    public ReservationDTO getReservationById(Long idReservation) {
-        return reservationMapper.toReservationDTO(
-                reservationRepository.findById(idReservation)
+    public BookingDTO getReservationById(Long idReservation) {
+        return bookingMapper.toBookingDTO(
+                reservationRepository.findByIdWithItineraries(idReservation)
                         .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND,
                                 String.format(ErrorCode.RESERVATION_NOT_FOUND.getMessage(), idReservation))));
     }
 
     @Override
-    public Page<ReservationDTO> getReservationsByUsername(Pageable pageable) {
+    public Page<BookingDTO> getReservationsByUsername(Pageable pageable) {
         return reservationRepository.findByUserUsername(pageable, getAuthenticator().getName())
-                .map(reservationMapper::toReservationDTO);
+                .map(bookingMapper::toBookingDTO);
     }
 
     @Override
-    public Page<ReservationDTO> getReservations(Pageable pageable) {
-        return reservationRepository.findAll(pageable).map(reservationMapper::toReservationDTO);
+    public Page<BookingDTO> getReservations(Pageable pageable) {
+        return reservationRepository.findAll(pageable).map(bookingMapper::toBookingDTO);
     }
 
     @Override
@@ -141,7 +143,7 @@ public class ReservationServiceImpl implements ReservationService {
     public void expirePendingReservations() {
 
         List<Long> expiredReservationIds = reservationRepository.findExpiredReservationIds(
-                 LocalDateTime.now());
+                LocalDateTime.now());
 
         if (expiredReservationIds.isEmpty()) {
             return;
