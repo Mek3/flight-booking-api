@@ -32,11 +32,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>{
     @Query("SELECT r FROM Reservation r WHERE r.id = :id")
     Optional<Reservation> findByIdWithFlightInstance(Long id);
 
-    @EntityGraph(attributePaths = {
-            "itineraries",
-            "itineraries.segments",
-            "itineraries.segments.flightInstance",
-            "itineraries.segments.flightInstance.flightSchedule"})
+    @EntityGraph(attributePaths = {"itineraries"})
     @Query("SELECT r FROM Reservation r WHERE r.id = :id")
     Optional<Reservation> findByIdWithItineraries(Long id);
 

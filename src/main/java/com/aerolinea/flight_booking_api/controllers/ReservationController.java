@@ -5,8 +5,6 @@ import com.aerolinea.flight_booking_api.dtos.booking.BookingRequest;
 import com.aerolinea.flight_booking_api.services.BookingService;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.aerolinea.flight_booking_api.dtos.ReservationDTO;
-import com.aerolinea.flight_booking_api.dtos.ReservationRequest;
 import com.aerolinea.flight_booking_api.services.ReservationService;
 
 import jakarta.validation.Valid;
@@ -57,25 +55,25 @@ public class ReservationController {
 
     @PreAuthorize("hasRole('USER')")
     @GetMapping("/me/{id}")
-    public ResponseEntity<ReservationDTO> getReservationByIdAndUsername(@PathVariable Long id) {
+    public ResponseEntity<BookingDTO> getReservationByIdAndUsername(@PathVariable Long id) {
         return ResponseEntity.ok().body(reservationService.getReservationByIdAndUsername(id));
     }
 
     @PreAuthorize("hasRole('USER')")
     @GetMapping("/me")
-    public ResponseEntity<Page<ReservationDTO>> getReservationsByUsername(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+    public ResponseEntity<Page<BookingDTO>> getReservationsByUsername(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
         return ResponseEntity.ok().body(reservationService.getReservationsByUsername(pageable));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
-    public ResponseEntity<ReservationDTO> getReservationById(@PathVariable Long id) {
+    public ResponseEntity<BookingDTO> getReservationById(@PathVariable Long id) {
         return ResponseEntity.ok().body(reservationService.getReservationById(id));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping()
-    public ResponseEntity<Page<ReservationDTO>> getReservations(@PageableDefault(size = 10, sort= "createdAt") Pageable pageable) {
+    public ResponseEntity<Page<BookingDTO>> getReservations(@PageableDefault(size = 10, sort= "createdAt") Pageable pageable) {
         return ResponseEntity.ok().body(reservationService.getReservations(pageable));
     }
     

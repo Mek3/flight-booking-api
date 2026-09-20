@@ -1,7 +1,7 @@
 package com.aerolinea.flight_booking_api.domain.reservation;
 
 import com.aerolinea.flight_booking_api.exceptions.ResourceNotFoundException;
-import com.aerolinea.flight_booking_api.mappers.ReservationMapper;
+import com.aerolinea.flight_booking_api.mappers.BookingMapper;
 import com.aerolinea.flight_booking_api.models.Reservation;
 import com.aerolinea.flight_booking_api.models.enums.ReservationStatus;
 import com.aerolinea.flight_booking_api.repositories.ReservationRepository;
@@ -51,7 +51,7 @@ class ReservationExpirationTest {
     private SeatReservationRepository seatReservationRepository;
 
     @Mock
-    private ReservationMapper reservationMapper;
+    private BookingMapper bookingMapper;
 
     @Mock
     private ReservationService selfProxy;
