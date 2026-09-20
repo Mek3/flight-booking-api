@@ -5,8 +5,6 @@ import com.aerolinea.flight_booking_api.dtos.booking.BookingRequest;
 import com.aerolinea.flight_booking_api.services.BookingService;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.aerolinea.flight_booking_api.dtos.ReservationDTO;
-import com.aerolinea.flight_booking_api.dtos.ReservationRequest;
 import com.aerolinea.flight_booking_api.services.ReservationService;
 
 import jakarta.validation.Valid;
