@@ -2,6 +2,8 @@
 
 [![CI Pipeline](https://github.com/Mek3/flight-booking-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Mek3/flight-booking-api/actions/workflows/ci.yml)
 
+🇬🇧 **English** · 🇪🇸 [Español](README.es.md)
+
 This is a backend API for an airline booking system.
 
 It does three main things. First, it takes flight schedules that repeat every week and creates flights on specific dates. Second, it creates the seats for each flight. Third, it handles bookings that can have one or more flights, checks that the times are correct, and makes sure two people cannot book the same seat.
@@ -19,21 +21,34 @@ I built this project to work on the difficult parts of airline booking. I did no
 ```mermaid
 erDiagram
     User ||--o{ Reservation : books
+    User ||--o{ UserRoleAssignment : has
+    Role ||--o{ UserRoleAssignment : "granted through"
+
     Reservation ||--|{ Itinerary : "1..N"
     Itinerary ||--|{ FlightSegment : "1..N"
     FlightSegment }o--|| FlightInstance : references
+
     FlightInstance }o--|| FlightSchedule : "on a date"
-    FlightInstance }o--|| Aircraft : "flown by"
+    FlightInstance }o--o| Aircraft : "flown by (assigned later)"
+    FlightInstance ||--o{ FlightStatusHistory : "status log"
+    FlightInstance ||--o{ Seat : materialises
+
     FlightSchedule }o--|| Airport : departs
     FlightSchedule }o--|| Airport : arrives
     FlightSchedule }o--|| AircraftLayout : "cabin plan"
-    FlightInstance ||--|{ Seat : materialises
-    Seat ||--o| SeatReservation : "0..1 active"
+
+    AircraftLayout }o--|| AircraftModel : "configures"
+    Aircraft }o--|| AircraftModel : "is a"
+
+    Seat ||--o{ SeatReservation : "many over time, 0..1 active"
     SeatReservation }o--|| FlightSegment : "holds for"
 
+    Route }o--|| Airport : origin
+    Route }o--|| Airport : destination
+
     Reservation {
-        string reservationCode
-        enum status
+        string reservationCode UK
+        enum status "PENDING, CONFIRMED, CANCELLED, EXPIRED"
         int numberOfPassengers
         decimal totalPrice
     }
@@ -47,21 +62,56 @@ erDiagram
         date departureDate
         enum status
     }
+    FlightStatusHistory {
+        string status
+        string remarks
+    }
     FlightSchedule {
-        string flightNumber
+        string flightNumber UK
         time departureTime
         time arrivalTime
         int arrivalDayOffset "0 = same day, 1 = overnight"
         int daysOfWeekMask
         decimal basePrice
     }
+    Airport {
+        string code UK "IATA"
+        string name
+        string city
+        string country
+    }
+    AircraftModel {
+        string manufacturer
+        string modelName
+        short maxCapacity
+    }
+    AircraftLayout {
+        string cabinClass
+        int seatCapacity
+        int totalRows
+        string seatLetters
+    }
+    Aircraft {
+        string registrationNumber UK
+        int totalFlightHours
+    }
     Seat {
         int rowNumber
         string seatLetter
+        boolean isAvailable "legacy — unused, availability is derived"
     }
     SeatReservation {
         enum status "HELD, CONFIRMED, EXPIRED"
         datetime heldUntil
+        long version "optimistic lock"
+    }
+    User {
+        string username UK
+        string email UK
+        boolean isActive
+    }
+    Role {
+        string name UK
     }
 ```
 
@@ -164,6 +214,7 @@ concurrency fails before a single lock is taken, so locks are held for as little
 time as possible. And because the graph is assembled in memory, a rejected
 booking leaves nothing behind — the guarantee does not depend on a rollback.
 
+---
 
 ## Seat hold lifecycle
 
@@ -293,7 +344,15 @@ I prefer to write these decisions here instead of hiding them. Deciding where to
 
 ## ⚙️ How to run it
 
-**You need:** JDK 17, MySQL running on your machine, and Docker for the tests.
+**You need:** JDK 17, MySQL and Redis running on your machine, and Docker for the tests.
+
+If you do not have Redis installed, one container is enough:
+
+```bash
+docker run -d --name redis-local -p 6379:6379 redis:7
+```
+
+Then start the application:
 
 ```bash
 # Secrets are environment variables. Nothing is in the code, nothing is committed.
@@ -302,7 +361,17 @@ export DB_LOCAL_USER=root DB_LOCAL_PASSWORD=root JWT_SECRET_LOCAL=<your-secret>
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-Flyway creates the schema and the seed data (users and roles) when the application starts.
+On Windows PowerShell, the same thing:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE="local"
+$env:JWT_SECRET_LOCAL="<your-secret>"
+.\mvnw spring-boot:run
+```
+
+Flyway creates the schema and the roles when the application starts. Under the `local` profile, a seeder then fills an empty database with demo data: four airports, a route with a connection, an overnight return flight, a domestic route, seven days of flights with their seats, a demo user, and one booking.
+
+The seeder only runs when the `airports` table is empty, so restarting the application never duplicates data. To load it again, empty the database first.
 
 ```bash
 mvn test
@@ -315,5 +384,13 @@ Testcontainers creates temporary MySQL containers, runs the tests, and deletes t
 ### Authentication
 
 Use `POST /api/v1/auth/register` or `/api/v1/auth/login`. Then send the JWT as a Bearer token.
+
+With the local seeder, you can log in straight away:
+
+```json
+{ "username": "demo", "password": "demo1234" }
+```
+
+In Swagger UI, paste the token into the **Authorize** button at the top of the page. Every request made from Swagger then carries it.
 
 `ROLE_ADMIN` manages the infrastructure: airports, aircraft, routes and schedules. `ROLE_USER` searches flights and manages their own bookings.
