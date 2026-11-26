@@ -16,6 +16,7 @@ public enum ErrorCode {
     RESERVATION_ALREADY_EXPIRED(2004L, "Reservation with ID: %s is already expired"),
     CANCELLATION_TIME_EXPIRED(2005L, "Cancellations must be made at least 24 hours in advance. Reservation ID: %s"),
     RESERVATION_INVALID_TRANSITION(2006L, "Reservation %s cannot move from %s to %s"),
+    RESERVATION_HAS_NO_HELD_SEATS(2007L, "Reservation %s has no held seats to confirm"),
 
     // User & Security Domain (3000 - 3999)
     USER_NOT_FOUND(3001L, "User not found with username: %s"),
@@ -76,6 +77,7 @@ public enum ErrorCode {
     SEAT_RESERVATION_NOT_FOUND(8501L, "Seat reservation not found with ID: %s"),
     SEAT_RESERVATION_INVALID_TRANSITION(8502L, "Seat reservation %s cannot move from %s to %s"),
     SEAT_NOT_ON_SEGMENT_FLIGHT(8503L, "Seat %s does not belong to the flight instance of segment %s"),
+    SEAT_RESERVATION_EXPIRED(8504L, "Seat reservation %s expired at %s"),
 
     // System & Framework (9000 - 9999)
     VALIDATION_ERROR(9001L, "Validation error: %s"),

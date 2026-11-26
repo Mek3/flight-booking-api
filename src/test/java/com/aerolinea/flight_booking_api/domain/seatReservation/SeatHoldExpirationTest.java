@@ -1,5 +1,7 @@
 package com.aerolinea.flight_booking_api.domain.seatReservation;
 
+import com.aerolinea.flight_booking_api.exceptions.BusinessRuleViolationException;
+import com.aerolinea.flight_booking_api.exceptions.ErrorCode;
 import com.aerolinea.flight_booking_api.models.*;
 import com.aerolinea.flight_booking_api.models.enums.SeatReservationStatus;
 import com.aerolinea.flight_booking_api.repositories.SeatRepository;
@@ -16,12 +18,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.*;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
@@ -39,20 +39,22 @@ class SeatHoldExpirationTest {
     @Mock
     private SeatReservationRepository seatReservationRepository;
 
+    private final Clock clock = Clock.fixed(Instant.parse("2026-11-26T10:00:00Z"), ZoneOffset.UTC);
+
     @InjectMocks
     private SeatReservationServiceImpl seatReservationService;
 
     @BeforeEach
     void setUp() {
+        seatReservationService = new SeatReservationServiceImpl(seatRepository, seatReservationRepository, clock);
         ReflectionTestUtils.setField(seatReservationService, "cartTtl", Duration.ofMinutes(15));
     }
-
     private SeatReservation hold(LocalDateTime heldUntil) {
         return SeatReservation.builder().heldUntil(heldUntil).build();
     }
 
     private SeatReservation expiredHold() {
-        return hold(LocalDateTime.now().minusMinutes(1));
+        return hold(LocalDateTime.now(clock).minusMinutes(1));
     }
 
     @Nested
@@ -118,8 +120,8 @@ class SeatHoldExpirationTest {
         @DisplayName("Should move every hold of the reservation to CONFIRMED")
         void shouldConfirmHolds() {
             List<SeatReservation> holds = List.of(
-                    hold(LocalDateTime.now().plusMinutes(10)),
-                    hold(LocalDateTime.now().plusMinutes(10)));
+                    hold(LocalDateTime.now(clock).plusMinutes(10)),
+                    hold(LocalDateTime.now(clock).plusMinutes(10)));
 
             when(seatReservationRepository.findHoldsByReservationId(anyLong())).thenReturn(holds);
 
@@ -132,13 +134,36 @@ class SeatHoldExpirationTest {
         @Test
         @DisplayName("Should confirm a hold whose window is about to close")
         void shouldConfirmHoldOnTheEdge() {
-            SeatReservation aboutToExpire = hold(LocalDateTime.now().plusNanos(1));
+            SeatReservation aboutToExpire = hold(LocalDateTime.now(clock).plusNanos(1));
             when(seatReservationRepository.findHoldsByReservationId(anyLong()))
                     .thenReturn(List.of(aboutToExpire));
 
             seatReservationService.confirmSeatReservationsForReservation(RESERVATION_ID);
 
             assertThat(aboutToExpire.getStatus()).isEqualTo(SeatReservationStatus.CONFIRMED);
+        }
+
+        @Test
+        @DisplayName("Should not save any hold if one of them has expired")
+        void shouldRejectWhenOneHoldExpired() {
+            SeatReservation live = hold(LocalDateTime.now(clock).plusMinutes(10));
+            when(seatReservationRepository.findHoldsByReservationId(anyLong()))
+                    .thenReturn(List.of(live, expiredHold()));
+
+            assertThatThrownBy(() -> seatReservationService.confirmSeatReservationsForReservation(RESERVATION_ID))
+                    .isInstanceOf(BusinessRuleViolationException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEAT_RESERVATION_EXPIRED);
+            verify(seatReservationRepository, never()).saveAll(any());
+        }
+
+        @Test
+        @DisplayName("Should reject confirming a reservation with no held seats")
+        void shouldRejectWhenNoHolds() {
+            when(seatReservationRepository.findHoldsByReservationId(anyLong())).thenReturn(List.of());
+
+            assertThatThrownBy(() -> seatReservationService.confirmSeatReservationsForReservation(RESERVATION_ID))
+                    .isInstanceOf(BusinessRuleViolationException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RESERVATION_HAS_NO_HELD_SEATS);
         }
     }
 
