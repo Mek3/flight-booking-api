@@ -14,8 +14,9 @@ public enum SeatReservationStatus {
 
     public boolean canTransitionTo(SeatReservationStatus target) {
         return switch (this) {
-            case HELD -> target == CONFIRMED || target == EXPIRED;
-            case CONFIRMED, EXPIRED, RELEASED -> false;
+            case HELD -> target == CONFIRMED || target == EXPIRED || target == RELEASED;
+            case CONFIRMED -> target == RELEASED;
+            case EXPIRED, RELEASED -> false;
         };
     }
 

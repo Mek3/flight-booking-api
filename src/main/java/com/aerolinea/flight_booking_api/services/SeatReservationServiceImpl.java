@@ -145,11 +145,15 @@ public class SeatReservationServiceImpl implements SeatReservationService {
         log.debug("Cancelled {} seat reservations for reservation {}", reservations.size(), idReservation);
     }
 
-    @Transactional
     @Override
+    @Transactional
     public void releaseSeatReservationsForReservation(Long idReservation) {
-    }
+        List<SeatReservation> seats = seatReservationRepository.findActiveByReservationId(idReservation);
+        seats.forEach(SeatReservation::release);
+        seatReservationRepository.saveAll(seats);
 
+        log.debug("Released {} seats for reservation {}", seats.size(), idReservation);
+    }
     @Override
     public void confirmSeatReservationsForReservation(Long idReservation) {
 
