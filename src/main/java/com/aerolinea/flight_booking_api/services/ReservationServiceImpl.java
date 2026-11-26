@@ -133,8 +133,8 @@ public class ReservationServiceImpl implements ReservationService {
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.RESERVATION_NOT_FOUND,
                         String.format(ErrorCode.RESERVATION_NOT_FOUND.getMessage(), id)));
 
-        seatReservationService.confirmSeatReservationsForReservation(id);
         reservation.confirmReservation();
+        seatReservationService.confirmSeatReservationsForReservation(id);
         reservationRepository.save(reservation);
         log.info("Reservation successfully confirmed ID: {}", id);
     }

@@ -15,6 +15,7 @@ public enum ErrorCode {
     RESERVATION_ALREADY_CONFIRMED(2003L, "Reservation with ID: %s is already confirmed"),
     RESERVATION_ALREADY_EXPIRED(2004L, "Reservation with ID: %s is already expired"),
     CANCELLATION_TIME_EXPIRED(2005L, "Cancellations must be made at least 24 hours in advance. Reservation ID: %s"),
+    RESERVATION_INVALID_TRANSITION(2006L, "Reservation %s cannot move from %s to %s"),
 
     // User & Security Domain (3000 - 3999)
     USER_NOT_FOUND(3001L, "User not found with username: %s"),

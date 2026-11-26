@@ -148,6 +148,24 @@ class ReservationServiceImplTest {
     }
 
     @Test
+    @DisplayName("Should not confirm an expired reservation and should not touch its seats")
+    void shouldNotConfirmExpiredReservation() {
+        mockSecurityContext("pacog", "ROLE_USER");
+        testReservation.setStatus(ReservationStatus.EXPIRED);
+        when(reservationRepository.findByIdAndUserUsername(100L, "pacog"))
+                .thenReturn(Optional.of(testReservation));
+
+        BusinessRuleViolationException exception = assertThrows(
+                BusinessRuleViolationException.class,
+                () -> reservationService.confirmReservation(100L));
+
+        assertEquals(ErrorCode.RESERVATION_INVALID_TRANSITION, exception.getErrorCode());
+        assertEquals(ReservationStatus.EXPIRED, testReservation.getStatus());
+        verify(seatReservationService, never()).confirmSeatReservationsForReservation(any());
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
     @DisplayName("Owner should be able to cancel reservation with more than 24h notice")
     void ownerShouldCancelReservationSuccessfully() {
         mockSecurityContext("pacog", "ROLE_USER");

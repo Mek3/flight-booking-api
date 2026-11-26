@@ -92,6 +92,11 @@ public class Reservation extends BaseEntity {
             throw new BusinessRuleViolationException(ErrorCode.RESERVATION_ALREADY_CONFIRMED,
                     String.format(ErrorCode.RESERVATION_ALREADY_CONFIRMED.getMessage(), this.id));
         }
+        if (!this.status.canTransitionTo(ReservationStatus.CONFIRMED)) {
+            throw new BusinessRuleViolationException(ErrorCode.RESERVATION_INVALID_TRANSITION,
+                    String.format(ErrorCode.RESERVATION_INVALID_TRANSITION.getMessage(),
+                            this.id, this.status, ReservationStatus.CONFIRMED));
+        }
         this.status = ReservationStatus.CONFIRMED;
     }
 
