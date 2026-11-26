@@ -67,6 +67,10 @@ public class SeatReservation extends BaseEntity {
     }
 
     public void confirm(LocalDateTime now) {
+        if (isExpiredAt(now)) {
+            throw new BusinessRuleViolationException(ErrorCode.SEAT_RESERVATION_EXPIRED,
+                    String.format(ErrorCode.SEAT_RESERVATION_EXPIRED.getMessage(), this.id, this.heldUntil));
+        }
         transitionTo(SeatReservationStatus.CONFIRMED);
     }
 

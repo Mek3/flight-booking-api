@@ -149,6 +149,10 @@ public class SeatReservationServiceImpl implements SeatReservationService {
     public void confirmSeatReservationsForReservation(Long idReservation) {
 
         List<SeatReservation> reservations = seatReservationRepository.findHoldsByReservationId(idReservation);
+        if (reservations.isEmpty()) {
+            throw new BusinessRuleViolationException(ErrorCode.RESERVATION_HAS_NO_HELD_SEATS,
+                    String.format(ErrorCode.RESERVATION_HAS_NO_HELD_SEATS.getMessage(), idReservation));
+        }
         LocalDateTime now = LocalDateTime.now(clock);
         reservations.forEach(reservation -> reservation.confirm(now));
         seatReservationRepository.saveAll(reservations);
