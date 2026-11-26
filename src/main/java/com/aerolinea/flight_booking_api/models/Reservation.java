@@ -92,12 +92,7 @@ public class Reservation extends BaseEntity {
             throw new BusinessRuleViolationException(ErrorCode.RESERVATION_ALREADY_CONFIRMED,
                     String.format(ErrorCode.RESERVATION_ALREADY_CONFIRMED.getMessage(), this.id));
         }
-        if (!this.status.canTransitionTo(ReservationStatus.CONFIRMED)) {
-            throw new BusinessRuleViolationException(ErrorCode.RESERVATION_INVALID_TRANSITION,
-                    String.format(ErrorCode.RESERVATION_INVALID_TRANSITION.getMessage(),
-                            this.id, this.status, ReservationStatus.CONFIRMED));
-        }
-        this.status = ReservationStatus.CONFIRMED;
+        transitionTo(ReservationStatus.CONFIRMED);
     }
 
     public void cancelReservation() {
@@ -105,7 +100,7 @@ public class Reservation extends BaseEntity {
             throw new BusinessRuleViolationException(ErrorCode.RESERVATION_ALREADY_CANCELLED,
                     String.format(ErrorCode.RESERVATION_ALREADY_CANCELLED.getMessage(), this.id));
         }
-        this.status = ReservationStatus.CANCELLED;
+        transitionTo(ReservationStatus.CANCELLED);
     }
 
     public void expireReservation() {
@@ -113,6 +108,15 @@ public class Reservation extends BaseEntity {
             throw new BusinessRuleViolationException(ErrorCode.RESERVATION_ALREADY_EXPIRED,
                     String.format(ErrorCode.RESERVATION_ALREADY_EXPIRED.getMessage(), this.id));
         }
-        this.status = ReservationStatus.EXPIRED;
+        transitionTo(ReservationStatus.EXPIRED);
+    }
+
+    private void transitionTo(ReservationStatus target) {
+        if (!this.status.canTransitionTo(target)) {
+            throw new BusinessRuleViolationException(ErrorCode.RESERVATION_INVALID_TRANSITION,
+                    String.format(ErrorCode.RESERVATION_INVALID_TRANSITION.getMessage(),
+                            this.id, this.status, target));
+        }
+        this.status = target;
     }
 }

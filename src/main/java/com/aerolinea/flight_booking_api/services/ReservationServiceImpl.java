@@ -92,6 +92,7 @@ public class ReservationServiceImpl implements ReservationService {
         }
 
         reservation.cancelReservation();
+        seatReservationService.releaseSeatReservationsForReservation(idReservation);
     }
 
     @Override

@@ -146,6 +146,15 @@ public class SeatReservationServiceImpl implements SeatReservationService {
     }
 
     @Override
+    @Transactional
+    public void releaseSeatReservationsForReservation(Long idReservation) {
+        List<SeatReservation> seats = seatReservationRepository.findActiveByReservationId(idReservation);
+        seats.forEach(SeatReservation::release);
+        seatReservationRepository.saveAll(seats);
+
+        log.debug("Released {} seats for reservation {}", seats.size(), idReservation);
+    }
+    @Override
     public void confirmSeatReservationsForReservation(Long idReservation) {
 
         List<SeatReservation> reservations = seatReservationRepository.findHoldsByReservationId(idReservation);

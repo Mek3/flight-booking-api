@@ -11,6 +11,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import java.math.BigDecimal;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ReservationTest {
@@ -58,5 +60,37 @@ class ReservationTest {
                 reservation::confirmReservation);
 
         assertEquals(ErrorCode.RESERVATION_ALREADY_CONFIRMED, exception.getErrorCode());
+    }
+
+
+    @Test
+    void confirmedReservationCanBeCancelled() {
+        Reservation reservation = reservationIn(ReservationStatus.CONFIRMED);
+
+        reservation.cancelReservation();
+
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ReservationStatus.class, names = {"EXPIRED", "COMPLETED"})
+    void closedReservationCannotBeCancelled(ReservationStatus status) {
+        Reservation reservation = reservationIn(status);
+
+        assertThatThrownBy(reservation::cancelReservation)
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RESERVATION_INVALID_TRANSITION);
+        assertThat(reservation.getStatus()).isEqualTo(status);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ReservationStatus.class, names = {"CONFIRMED", "CANCELLED", "COMPLETED"})
+    void onlyPendingReservationCanExpire(ReservationStatus status) {
+        Reservation reservation = reservationIn(status);
+
+        assertThatThrownBy(reservation::expireReservation)
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RESERVATION_INVALID_TRANSITION);
+        assertThat(reservation.getStatus()).isEqualTo(status);
     }
 }
