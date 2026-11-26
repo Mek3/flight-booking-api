@@ -48,7 +48,7 @@ erDiagram
 
     Reservation {
         string reservationCode UK
-        enum status "PENDING, CONFIRMED, CANCELLED, EXPIRED"
+        enum status "PENDING, CONFIRMED, CANCELLED, COMPLETED, EXPIRED"
         int numberOfPassengers
         decimal totalPrice
     }
@@ -101,7 +101,7 @@ erDiagram
         boolean isAvailable "heredado, sin uso: la disponibilidad se calcula"
     }
     SeatReservation {
-        enum status "HELD, CONFIRMED, EXPIRED"
+        enum status "HELD, CONFIRMED, EXPIRED, RELEASED"
         datetime heldUntil
         long version "bloqueo optimista"
     }
@@ -223,9 +223,11 @@ stateDiagram-v2
 
     HELD --> CONFIRMED : pago confirmado
     HELD --> EXPIRED : el barrido encuentra heldUntil en el pasado
+    HELD --> RELEASED : reserva cancelada
+    CONFIRMED --> RELEASED : reserva cancelada
 
-    CONFIRMED --> [*] : terminal
     EXPIRED --> [*] : terminal
+    RELEASED --> [*] : terminal
 
     note right of HELD
         occupied_flag = TRUE
@@ -242,11 +244,19 @@ stateDiagram-v2
         el asiento vuelve a estar libre,
         la fila se conserva como historial
     end note
+
+    note right of RELEASED
+        occupied_flag = NULL
+        el cliente devolvió el asiento,
+        se puede volver a vender
+    end note
 ```
 
-**`occupied_flag` es una columna generada**: vale `TRUE` mientras el estado es `HELD` o `CONFIRMED`, y `NULL` en cualquier otro caso. Un índice `UNIQUE` sobre `(seat_id, occupied_flag)` permite por tanto una sola reserva activa por asiento, y como MySQL no considera que dos `NULL` colisionen, una retención caducada libera su asiento sin borrar la fila.
+**`occupied_flag` es una columna generada**: vale `TRUE` mientras el estado es `HELD` o `CONFIRMED`, y `NULL` en cualquier otro caso. Un índice `UNIQUE` sobre `(seat_id, occupied_flag)` permite por tanto una sola reserva activa por asiento, y como MySQL no considera que dos `NULL` colisionen, una retención caducada o liberada deja libre su asiento sin borrar la fila.
 
-**Los dos estados finales son terminales**, y así se resuelve la carrera entre la caducidad y el pago: una retención confirmada instantes antes de que pase el barrido ya no está en `HELD`, así que el barrido no la encuentra, y la máquina de estados rechazaría la transición aunque la encontrara.
+**Dos formas de liberar un asiento.** `EXPIRED` significa que se acabó el tiempo. `RELEASED` significa que el cliente canceló la reserva. Las dos liberan el asiento de la misma forma, pero tenerlas separadas permite saber después por qué volvió a quedar libre.
+
+**Un asiento confirmado nunca caduca.** `EXPIRED` y `RELEASED` son terminales, y `CONFIRMED` solo puede pasar a `RELEASED`. Así se resuelve la carrera entre la caducidad y el pago: una retención confirmada instantes antes de que pase el barrido ya no está en `HELD`, así que el barrido no la encuentra, y la máquina de estados rechazaría `CONFIRMED → EXPIRED` aunque la encontrara.
 
 **Una columna de versión protege las propias transiciones.** El barrido de caducidad y la confirmación del pago son dos transacciones independientes que leen y escriben la misma fila. Sin versión, un pago que se confirmara entre el `SELECT` del barrido y su `UPDATE` quedaría pisado con `EXPIRED`, y la máquina de estados no lo detectaría, porque la entidad que tiene el barrido en memoria todavía cree que está en `HELD`.
 
@@ -281,7 +291,7 @@ Gracias a eso puedo probar todas las reglas sin contexto de Spring y sin base de
 
 Las reservas de asiento tienen un índice `UNIQUE` sobre una columna generada, que vale `NULL` cuando el asiento se libera. MySQL no considera que dos `NULL` colisionen.
 
-Así, cuando una retención caduca, el asiento queda libre para una reserva nueva, pero la fila antigua se conserva como historial.
+Así, cuando una retención caduca o se cancela la reserva, el asiento queda libre para una reserva nueva, pero la fila antigua se conserva como historial.
 
 La solución obvia, una restricción sobre `(asiento, segmento)`, no funciona. Dos reservas del mismo vuelo crean dos filas de segmento distintas, así que esa restricción permitiría vender el mismo asiento dos veces.
 → `V*__add_seat_reservation.sql`

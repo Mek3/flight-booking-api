@@ -48,7 +48,7 @@ erDiagram
 
     Reservation {
         string reservationCode UK
-        enum status "PENDING, CONFIRMED, CANCELLED, EXPIRED"
+        enum status "PENDING, CONFIRMED, CANCELLED, COMPLETED, EXPIRED"
         int numberOfPassengers
         decimal totalPrice
     }
@@ -101,7 +101,7 @@ erDiagram
         boolean isAvailable "legacy — unused, availability is derived"
     }
     SeatReservation {
-        enum status "HELD, CONFIRMED, EXPIRED"
+        enum status "HELD, CONFIRMED, EXPIRED, RELEASED"
         datetime heldUntil
         long version "optimistic lock"
     }
@@ -227,9 +227,11 @@ stateDiagram-v2
 
     HELD --> CONFIRMED : payment confirmed
     HELD --> EXPIRED : sweep finds heldUntil in the past
+    HELD --> RELEASED : reservation cancelled
+    CONFIRMED --> RELEASED : reservation cancelled
 
-    CONFIRMED --> [*] : terminal
     EXPIRED --> [*] : terminal
+    RELEASED --> [*] : terminal
 
     note right of HELD
         occupied_flag = TRUE
@@ -246,17 +248,29 @@ stateDiagram-v2
         the seat is free again,
         the row survives as history
     end note
+
+    note right of RELEASED
+        occupied_flag = NULL
+        the customer gave the seat back,
+        it can be sold again
+    end note
 ```
 
 **`occupied_flag` is a generated column**, `TRUE` while the status is `HELD` or
 `CONFIRMED` and `NULL` otherwise. A `UNIQUE` index over `(seat_id, occupied_flag)`
 therefore allows one active reservation per seat, and — because MySQL does not treat
-`NULL`s as colliding — an expired hold frees its seat without the row being deleted.
+`NULL`s as colliding — an expired or released hold frees its seat without the row
+being deleted.
 
-**Both end states are terminal**, which is how the race between expiry and payment
-resolves: a hold confirmed moments before the sweep runs is no longer `HELD`, so the
-sweep does not match it, and the state machine would refuse the transition even if it
-did.
+**Two ways to free a seat.** `EXPIRED` means the time ran out. `RELEASED` means the
+customer cancelled the reservation. Both free the seat in the same way, but keeping
+them separate tells you later why the seat came back.
+
+**A confirmed seat never expires.** `EXPIRED` and `RELEASED` are terminal, and
+`CONFIRMED` can only move to `RELEASED`. This is how the race between expiry and
+payment resolves: a hold confirmed moments before the sweep runs is no longer `HELD`,
+so the sweep does not match it, and the state machine would refuse
+`CONFIRMED → EXPIRED` even if it did.
 
 **A version column guards the transitions themselves.** The expiry sweep and payment
 confirmation are two independent transactions reading and writing the same row. Without
@@ -295,7 +309,7 @@ Because of this, I can test all the rules without a Spring context and without a
 
 Seat reservations have a `UNIQUE` index on a generated column. This column is `NULL` when the seat is released. MySQL does not see two `NULL` values as a collision.
 
-So when a hold expires, the seat is free for a new reservation, but the old row stays in the table as history.
+So when a hold expires or a reservation is cancelled, the seat is free for a new reservation, but the old row stays in the table as history.
 
 The obvious solution, a constraint on `(seat, segment)`, does not work. Two bookings on the same flight create two different segment rows. So that constraint would allow selling the same seat two times.
 → `V*__add_seat_reservation.sql`
