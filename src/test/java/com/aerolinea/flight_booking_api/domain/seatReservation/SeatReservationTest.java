@@ -54,6 +54,27 @@ class SeatReservationTest {
 
             assertThat(hold.getStatus()).isEqualTo(SeatReservationStatus.EXPIRED);
         }
+        @Test
+        @DisplayName("Should move from HELD to RELEASED")
+        void shouldReleaseHeld() {
+            SeatReservation hold = newHold();
+
+            hold.release();
+
+            assertThat(hold.getStatus()).isEqualTo(SeatReservationStatus.RELEASED);
+        }
+
+        @Test
+        @DisplayName("Should move from CONFIRMED to RELEASED")
+        void shouldReleaseConfirmed() {
+            SeatReservation hold = newHold();
+            hold.confirm(NOW);
+
+            hold.release();
+
+            assertThat(hold.getStatus()).isEqualTo(SeatReservationStatus.RELEASED);
+        }
+
     }
 
     @Nested
@@ -89,6 +110,17 @@ class SeatReservationTest {
             hold.confirm(NOW);
 
             assertThatThrownBy(() -> hold.confirm(NOW))
+                    .isInstanceOf(BusinessRuleViolationException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEAT_RESERVATION_INVALID_TRANSITION);
+        }
+
+        @Test
+        @DisplayName("Should reject releasing an expired seat")
+        void shouldRejectReleasingExpired() {
+            SeatReservation hold = newHold();
+            hold.expire();
+
+            assertThatThrownBy(hold::release)
                     .isInstanceOf(BusinessRuleViolationException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEAT_RESERVATION_INVALID_TRANSITION);
         }
@@ -159,7 +191,7 @@ class SeatReservationTest {
         @Test
         @DisplayName("Should release the seat once expired")
         void shouldRelease() {
-            assertThat(SeatReservationStatus.EXPIRED.occupiesSeat()).isFalse();
+            assertThat(SeatReservationStatus.RELEASED.occupiesSeat()).isFalse();
         }
     }
 

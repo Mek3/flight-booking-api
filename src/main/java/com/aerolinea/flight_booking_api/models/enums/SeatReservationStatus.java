@@ -7,14 +7,15 @@ public enum SeatReservationStatus {
 
     HELD,
     CONFIRMED,
-    EXPIRED;
+    EXPIRED,
+    RELEASED;
 
     private static final Set<SeatReservationStatus> OCCUPYING = EnumSet.of(HELD, CONFIRMED);
 
     public boolean canTransitionTo(SeatReservationStatus target) {
         return switch (this) {
             case HELD -> target == CONFIRMED || target == EXPIRED;
-            case CONFIRMED, EXPIRED -> false;
+            case CONFIRMED, EXPIRED, RELEASED -> false;
         };
     }
 

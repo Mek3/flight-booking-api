@@ -145,6 +145,11 @@ public class SeatReservationServiceImpl implements SeatReservationService {
         log.debug("Cancelled {} seat reservations for reservation {}", reservations.size(), idReservation);
     }
 
+    @Transactional
+    @Override
+    public void releaseSeatReservationsForReservation(Long idReservation) {
+    }
+
     @Override
     public void confirmSeatReservationsForReservation(Long idReservation) {
 

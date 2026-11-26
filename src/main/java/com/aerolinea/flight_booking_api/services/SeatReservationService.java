@@ -5,6 +5,7 @@ import java.util.List;
 import com.aerolinea.flight_booking_api.dtos.booking.BookingRequest;
 import com.aerolinea.flight_booking_api.models.Reservation;
 import com.aerolinea.flight_booking_api.models.Seat;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface SeatReservationService {
 
@@ -17,6 +18,9 @@ public interface SeatReservationService {
     void createHoldsForReservation(Reservation reservation, List<Seat> lockedSeats);
 
     void cancelSeatReservationsForReservation(Long idReservation);
+
+    @Transactional
+    void releaseSeatReservationsForReservation(Long idReservation);
 
     void confirmSeatReservationsForReservation(Long idReservation);
 }

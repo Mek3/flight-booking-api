@@ -174,6 +174,24 @@ class ReservationServiceImplTest {
         reservationService.cancelReservation(100L);
 
         assertEquals(ReservationStatus.CANCELLED, testReservation.getStatus());
+
+        verify(seatReservationService).releaseSeatReservationsForReservation(100L);
+    }
+
+
+    @Test
+    @DisplayName("Should not release seats when the reservation cannot be cancelled")
+    void shouldNotReleaseSeatsOfExpiredReservation() {
+        mockSecurityContext("pacog", "ROLE_USER");
+        ReflectionTestUtils.setField(testReservation, "status", ReservationStatus.EXPIRED);
+        when(reservationRepository.findByIdWithItineraries(100L)).thenReturn(Optional.of(testReservation));
+
+        BusinessRuleViolationException exception = assertThrows(
+                BusinessRuleViolationException.class,
+                () -> reservationService.cancelReservation(100L));
+
+        assertEquals(ErrorCode.RESERVATION_INVALID_TRANSITION, exception.getErrorCode());
+        verify(seatReservationService, never()).releaseSeatReservationsForReservation(any());
     }
 
     @Test

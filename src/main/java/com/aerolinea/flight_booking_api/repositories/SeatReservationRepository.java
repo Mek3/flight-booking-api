@@ -72,4 +72,11 @@ public interface SeatReservationRepository extends JpaRepository<SeatReservation
     List<FlightInstanceCountProjection> countOccupiedGroupedByFlightInstance(@Param("ids") List<Long> ids,
                                                                              @Param("statuses") List<SeatReservationStatus> statuses);
 
+    @Query("""
+    SELECT sr FROM SeatReservation sr
+    WHERE sr.flightSegment.itinerary.reservation.id = :reservationId
+      AND sr.status IN ('HELD', 'CONFIRMED')
+    """)
+    List<SeatReservation> findActiveByReservationId(@Param("reservationId") Long reservationId);
+
 }

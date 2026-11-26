@@ -404,4 +404,25 @@ class SeatReservationServiceImplTest {
             assertThat(expiries).containsOnly(expiries.get(0));
         }
     }
+
+
+    @Nested
+    @DisplayName("Seat release")
+    class SeatRelease {
+
+        @Test
+        @DisplayName("Should release held and confirmed seats of the reservation")
+        void shouldReleaseActiveSeats() {
+            SeatReservation held = existingHold(SeatReservationStatus.HELD);
+            SeatReservation confirmed = existingHold(SeatReservationStatus.CONFIRMED);
+            when(seatReservationRepository.findActiveByReservationId(1L))
+                    .thenReturn(List.of(held, confirmed));
+
+            seatReservationService.releaseSeatReservationsForReservation(1L);
+
+            assertThat(held.getStatus()).isEqualTo(SeatReservationStatus.RELEASED);
+            assertThat(confirmed.getStatus()).isEqualTo(SeatReservationStatus.RELEASED);
+            verify(seatReservationRepository).saveAll(List.of(held, confirmed));
+        }
+    }
 }

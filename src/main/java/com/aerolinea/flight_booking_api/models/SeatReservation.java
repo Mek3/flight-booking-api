@@ -90,4 +90,8 @@ public class SeatReservation extends BaseEntity {
         }
         this.status = target;
     }
+
+    public void release() {
+        transitionTo(SeatReservationStatus.RELEASED);
+    }
 }
