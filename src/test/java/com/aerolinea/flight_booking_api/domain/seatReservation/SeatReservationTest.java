@@ -40,7 +40,7 @@ class SeatReservationTest {
         void shouldConfirm() {
             SeatReservation hold = newHold();
 
-            hold.confirm();
+            hold.confirm(NOW);
 
             assertThat(hold.getStatus()).isEqualTo(SeatReservationStatus.CONFIRMED);
         }
@@ -64,7 +64,7 @@ class SeatReservationTest {
         @DisplayName("Should reject expiring a confirmed seat")
         void shouldRejectExpiringConfirmed() {
             SeatReservation hold = newHold();
-            hold.confirm();
+            hold.confirm(NOW);
 
             assertThatThrownBy(hold::expire)
                     .isInstanceOf(BusinessRuleViolationException.class)
@@ -77,7 +77,7 @@ class SeatReservationTest {
             SeatReservation hold = newHold();
             hold.expire();
 
-            assertThatThrownBy(hold::confirm)
+            assertThatThrownBy(() -> hold.confirm(NOW))
                     .isInstanceOf(BusinessRuleViolationException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEAT_RESERVATION_INVALID_TRANSITION);
         }
@@ -86,9 +86,9 @@ class SeatReservationTest {
         @DisplayName("Should reject confirming twice")
         void shouldRejectDoubleConfirm() {
             SeatReservation hold = newHold();
-            hold.confirm();
+            hold.confirm(NOW);
 
-            assertThatThrownBy(hold::confirm)
+            assertThatThrownBy(() -> hold.confirm(NOW))
                     .isInstanceOf(BusinessRuleViolationException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEAT_RESERVATION_INVALID_TRANSITION);
         }
@@ -118,9 +118,30 @@ class SeatReservationTest {
         @DisplayName("Should never report a confirmed seat as expired, however old the hold")
         void shouldNeverExpireConfirmed() {
             SeatReservation hold = newHold();
-            hold.confirm();
+            hold.confirm(NOW);
 
             assertThat(hold.isExpiredAt(NOW.plusDays(30))).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should confirm a hold before its window closes")
+        void shouldConfirmLiveHold() {
+            SeatReservation hold = newHold();
+
+            hold.confirm(NOW.plusMinutes(14));
+
+            assertThat(hold.getStatus()).isEqualTo(SeatReservationStatus.CONFIRMED);
+        }
+
+        @Test
+        @DisplayName("Should reject confirming a hold after its window has closed")
+        void shouldRejectConfirmingExpiredHold() {
+            SeatReservation hold = newHold();
+
+            assertThatThrownBy(() -> hold.confirm(NOW.plusMinutes(16)))
+                    .isInstanceOf(BusinessRuleViolationException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SEAT_RESERVATION_EXPIRED);
+            assertThat(hold.getStatus()).isEqualTo(SeatReservationStatus.HELD);
         }
     }
 

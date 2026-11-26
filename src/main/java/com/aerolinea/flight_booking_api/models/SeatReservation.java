@@ -66,7 +66,7 @@ public class SeatReservation extends BaseEntity {
         this.status = SeatReservationStatus.HELD;
     }
 
-    public void confirm() {
+    public void confirm(LocalDateTime now) {
         transitionTo(SeatReservationStatus.CONFIRMED);
     }
 

@@ -1,5 +1,6 @@
 package com.aerolinea.flight_booking_api.services;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ public class SeatReservationServiceImpl implements SeatReservationService {
 
     private final SeatRepository seatRepository;
     private final SeatReservationRepository seatReservationRepository;
+    private final Clock clock;
 
     @Value("${app.booking.cart-ttl}")
     private Duration cartTtl;
@@ -116,7 +118,7 @@ public class SeatReservationServiceImpl implements SeatReservationService {
     @Transactional
     public void createHoldsForReservation(Reservation reservation, List<Seat> lockedSeats) {
         List<SeatReservation> holds = new ArrayList<>();
-        LocalDateTime heldUntil = LocalDateTime.now().plus(cartTtl);
+        LocalDateTime heldUntil = LocalDateTime.now(clock).plus(cartTtl);
 
         reservation.getItineraries().forEach(itinerary ->
                 itinerary.getSegments().forEach(segment -> lockedSeats.stream()
@@ -136,7 +138,7 @@ public class SeatReservationServiceImpl implements SeatReservationService {
     @Override
     @Transactional
     public void cancelSeatReservationsForReservation(Long idReservation) {
-        List<SeatReservation> reservations = seatReservationRepository.findHeldSeatsByReservationId(idReservation, LocalDateTime.now());
+        List<SeatReservation> reservations = seatReservationRepository.findHeldSeatsByReservationId(idReservation, LocalDateTime.now(clock));
         reservations.forEach(SeatReservation::expire);
         seatReservationRepository.saveAll(reservations);
 
@@ -145,8 +147,10 @@ public class SeatReservationServiceImpl implements SeatReservationService {
 
     @Override
     public void confirmSeatReservationsForReservation(Long idReservation) {
+
         List<SeatReservation> reservations = seatReservationRepository.findHoldsByReservationId(idReservation);
-        reservations.forEach(SeatReservation::confirm);
+        LocalDateTime now = LocalDateTime.now(clock);
+        reservations.forEach(reservation -> reservation.confirm(now));
         seatReservationRepository.saveAll(reservations);
 
         log.debug("Confirmed {} seat reservations for reservation {}", reservations.size(), idReservation);

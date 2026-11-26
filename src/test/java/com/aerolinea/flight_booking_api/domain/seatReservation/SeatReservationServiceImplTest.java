@@ -25,10 +25,7 @@ import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,8 +52,13 @@ class SeatReservationServiceImplTest {
     @InjectMocks
     private SeatReservationServiceImpl seatReservationService;
 
+    private final Clock clock = Clock.fixed(Instant.parse("2026-11-26T10:00:00Z"), ZoneOffset.UTC);
+
+
     @BeforeEach
     void setUp() {
+
+        seatReservationService = new SeatReservationServiceImpl(seatRepository, seatReservationRepository, clock);
         ReflectionTestUtils.setField(seatReservationService, "cartTtl", CART_TTL);
     }
 
@@ -97,7 +99,7 @@ class SeatReservationServiceImplTest {
 
     private SeatReservation existingHold(SeatReservationStatus status) {
         SeatReservation hold = SeatReservation.builder()
-                .heldUntil(LocalDateTime.now().plusMinutes(10))
+                .heldUntil(LocalDateTime.now(clock).plusMinutes(10))
                 .build();
 
         ReflectionTestUtils.setField(hold, "status", status);
@@ -380,14 +382,11 @@ class SeatReservationServiceImplTest {
         void shouldApplyConfiguredTtl() {
             FlightInstance instance = flightInstance(FLIGHT_A);
             Reservation reservation = reservationWith(instance);
-            LocalDateTime before = LocalDateTime.now().plus(CART_TTL);
 
             seatReservationService.createHoldsForReservation(reservation, List.of(seat(1L, instance)));
 
-            LocalDateTime after = LocalDateTime.now().plus(CART_TTL);
-
             assertThat(capturedHolds()).allSatisfy(hold ->
-                    assertThat(hold.getHeldUntil()).isBetween(before, after));
+                    assertThat(hold.getHeldUntil()).isEqualTo(LocalDateTime.now(clock).plus(CART_TTL)));
         }
 
         @Test
